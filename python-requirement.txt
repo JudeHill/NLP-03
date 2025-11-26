@@ -1,0 +1,8 @@
+torch
+transformers
+datasets
+tqdm
+numpy
+scikit-learn
+munkres
+colorlog

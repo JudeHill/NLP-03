@@ -32,6 +32,8 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         self.transition_prob[:, 0] = 0.0
         self.emission_prob = torch.full([self.num_states, self.num_obs], self.epsilon)
         self.log_scale = False
+        self.emission_lookup = {}
+        self.emission_index = 0
         self.cnt = 0  # Number of updates in sEM
         # TODO: optimize training by using UNK token
 
@@ -43,6 +45,8 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         self.emission_prob = torch.full([self.num_states, self.num_obs], self.epsilon)
         self.log_scale = False
         self.cnt = 0
+        self.emission_lookup = {}
+        self.emission_index = 0
 
     def train(
         self,
@@ -171,11 +175,36 @@ class HMMClassifier(BaseUnsupervisedClassifier):
             log_alpha[0, 1:] = log_A[0, 1:] + log_B[:, obs[0]]
             for t in range(1, n):
                 log_scores = log_alpha[t-1].unsqueeze(1) + log_A
-                log_alpha[t] = torch.logsumexp(log_scores[:, 1], dim=0) + log_B[:, obs[t]]
+                log_alpha[t] = torch.logsumexp(log_scores[:, 1:], dim=0) + log_B[:, self.lookup_emission(obs[t])]
             log_beta = torch.full((n, self.num_states+1), float('-inf'))
             log_beta[n-1, 1:] = 0.0 
             for t in range(n-2, -1, -1):
-                log_scores = log_beta[t+1].unsqueeze(1) + 
+                log_scores = log_beta[t+1].unsqueeze(1) + log_B[:, self.lookup_emission(obs[t+1])] + log_A
+                log_beta[t] = torch.logsumexp(log_scores[:, 1:], dim=0)
+            log_unnorm_gamma = log_alpha[:, 1:] + log_beta[:, 1:]
+            log_Z = torch.logsumexp(log_unnorm_gamma, dim=1, keepdim=True)
+            log_gamma = log_unnorm_gamma - log_Z
+           
+            log_alpha_real = log_alpha[:, 1:]       
+            log_beta_real  = log_beta[:, 1:]       
+
+            log_alpha_t = log_alpha_real[:-1]     
+            log_beta_t1 = log_beta_real[1:]       
+
+     
+            log_emit_next = log_B[:, self.lookup_emission(obs[1:])].T   
+
+            log_unnorm_xi = (
+                log_alpha_t.unsqueeze(2)         
+                + log_A.unsqueeze(0)              
+                + log_emit_next.unsqueeze(1)       
+                + log_beta_t1.unsqueeze(1)         
+            )                                     
+
+            log_Z = torch.logsumexp(log_unnorm_xi, dim=(1, 2), keepdim=True)
+            log_xi = log_unnorm_xi - log_Z         #
+
+
 
 
 
@@ -189,6 +218,13 @@ class HMMClassifier(BaseUnsupervisedClassifier):
 
 
         self.log_scale = True
+    def lookup_emission(self, emission: str) -> int:
+        if emission in self.emission_lookup:
+            return self.emission_lookup[emission]
+        else:
+            self.emission_lookup[emission] = self.emission_index
+            self.emission_index += 1
+            return self.emission_index
 
     def train_EM_hard_log(
         self,

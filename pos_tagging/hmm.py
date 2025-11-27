@@ -32,8 +32,6 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         self.transition_prob[:, 0] = 0.0
         self.emission_prob = torch.full([self.num_states, self.num_obs], self.epsilon)
         self.log_scale = False
-        self.emission_lookup = {}
-        self.emission_index = 0
         self.cnt = 0  # Number of updates in sEM
         # TODO: optimize training by using UNK token
 
@@ -167,57 +165,64 @@ class HMMClassifier(BaseUnsupervisedClassifier):
                 self.transition_prob = A
                 self.emission_prob = B
         log_A, log_B = torch.log(self.transition_prob), torch.log(self.emission_prob)
-        for eg in inputs:
-            seq = eg["tokens"]
-            n = len(seq)
-            obs = torch.tensor(seq, dtype=torch.StringType)
-            log_alpha = torch.full((n, self.num_states+1), float('-inf'))
-            log_alpha[0, 1:] = log_A[0, 1:] + log_B[:, obs[0]]
-            for t in range(1, n):
-                log_scores = log_alpha[t-1].unsqueeze(1) + log_A
-                log_alpha[t] = torch.logsumexp(log_scores[:, 1:], dim=0) + log_B[:, self.lookup_emission(obs[t])]
-            log_beta = torch.full((n, self.num_states+1), float('-inf'))
-            log_beta[n-1, 1:] = 0.0 
-            for t in range(n-2, -1, -1):
-                log_scores = log_beta[t+1].unsqueeze(1) + log_B[:, self.lookup_emission(obs[t+1])] + log_A
-                log_beta[t] = torch.logsumexp(log_scores[:, 1:], dim=0)
-            log_unnorm_gamma = log_alpha[:, 1:] + log_beta[:, 1:]
-            log_Z = torch.logsumexp(log_unnorm_gamma, dim=1, keepdim=True)
-            log_gamma = log_unnorm_gamma - log_Z
-           
-            log_alpha_real = log_alpha[:, 1:]       
-            log_beta_real  = log_beta[:, 1:]       
-
-            log_alpha_t = log_alpha_real[:-1]     
-            log_beta_t1 = log_beta_real[1:]       
-
-     
-            log_emit_next = log_B[:, self.lookup_emission(obs[1:])].T   
-
-            log_unnorm_xi = (
-                log_alpha_t.unsqueeze(2)         
-                + log_A.unsqueeze(0)              
-                + log_emit_next.unsqueeze(1)       
-                + log_beta_t1.unsqueeze(1)         
-            )                                     
-
-            log_Z = torch.logsumexp(log_unnorm_xi, dim=(1, 2), keepdim=True)
-            log_xi = log_unnorm_xi - log_Z         #
-
-
-
-
-
-
-
+        for _ in range(num_iter):
+            expected_emissions = torch.zeros(self.num_states, self.num_obs)
+            expected_transitions = torch.zeros(self.num_states, self.num_states)
+            expected_state_counts = torch.zeros(self.num_states)
+            expected_initial = torch.zeros(self.num_states)
+            for eg in inputs:
+                seq = eg["tokens"]
+                n = len(seq)
+                obs = eg["input_ids"]
+                log_alpha = torch.full((n, self.num_states+1), float('-inf'))
+                log_alpha[0, 1:] = log_A[0, 1:] + log_B[:, obs[0]]
+                for t in range(1, n):
+                    log_scores = log_alpha[t-1].unsqueeze(1) + log_A
+                    log_alpha[t] = torch.logsumexp(log_scores[:, 1:], dim=0) + log_B[:, obs[t]]
+                log_beta = torch.full((n, self.num_states+1), float('-inf'))
+                log_beta[n-1, 1:] = 0.0 
+                for t in range(n-2, -1, -1):
+                    log_scores = log_beta[t+1].unsqueeze(1) + log_B[:, obs[t+1]] + log_A
+                    log_beta[t] = torch.logsumexp(log_scores[:, 1:], dim=0)
+                log_unnorm_gamma = log_alpha[:, 1:] + log_beta[:, 1:]
+                log_Z = torch.logsumexp(log_unnorm_gamma, dim=1, keepdim=True)
+                log_gamma = log_unnorm_gamma - log_Z
             
+                log_alpha_real = log_alpha[:, 1:]       
+                log_beta_real  = log_beta[:, 1:]       
+
+                log_alpha_t = log_alpha_real[:-1]     
+                log_beta_t1 = log_beta_real[1:]       
+
         
-        # Complete your code here
+                log_emit_next = log_B[:, obs[1:]].T   
 
+                log_unnorm_xi = (
+                    log_alpha_t.unsqueeze(2)         
+                    + log_A.unsqueeze(0)              
+                    + log_emit_next.unsqueeze(1)       
+                    + log_beta_t1.unsqueeze(1)         
+                )                                     
 
+                log_Z = torch.logsumexp(log_unnorm_xi, dim=(1, 2), keepdim=True)
+                log_xi = log_unnorm_xi - log_Z      
+                gamma, xi = torch.exp(log_gamma), torch.exp(log_xi)
+                expected_state_counts += gamma.sum(dim=0)
+                expected_transitions += xi.sum(dim=0)
 
+                expected_initial += gamma[0]
+                
+                expected_emissions.scatter_add(
+                    1, # dimension
+                    obs.unsqueeze(0).expand(self.num_states, -1),
+                    gamma.T
+                )
 
-        self.log_scale = True
+            # M step (done after all inputs processed)
+            self.transition_prob[0, 1:] = expected_initial
+            self.transition_prob[1:, 1:] = expected_transitions / expected_state_counts[:, None]
+            self.emission_prob = expected_emissions / expected_state_counts[:, None]
+        # self.log_scale = True
     def lookup_emission(self, emission: str) -> int:
         if emission in self.emission_lookup:
             return self.emission_lookup[emission]
@@ -236,7 +241,26 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         """
         Train an HMM with the hard EM algorithm (also called Viterbi EM)
         """
-        self.log_scale = True
+        self.log_scale = False
+        for _ in range(num_iter):
+            emis_counts = torch.zeros(self.num_states, self.num_obs)
+            trans_counts = torch.zeros(self.num_states+1, self.num_states+1)
+            for eg in inputs:
+                obs = eg["input_ids"]
+                path = self.viterbi_log(obs)
+                T = obs.shape[0]
+                for t in range(T):
+                    emis_counts[path[t], obs[t]] += 1
+                for t in range(T):
+                    trans_counts[path[t], path[t+1]] += 1
+            self._normalize(emis_counts)
+            self._normalize(trans_counts)
+            self.emission_prob = emis_counts
+            self.transition_prob = trans_counts
+
+
+
+
 
     def train_sEM(
         self,
@@ -255,6 +279,7 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         """Run Viterbi algorithm"""
         assert not self.log_scale
         # Viterbi algorithm
+        optimal_path = []
         V = torch.zeros(self.num_states + 1, len(input_ids) + 1)
         path = {}
         V[:, 0] = self.transition_prob[0, :]

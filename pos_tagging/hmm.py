@@ -1,4 +1,5 @@
 import logging
+import math
 from typing import Callable
 
 import numpy as np
@@ -75,6 +76,10 @@ class HMMClassifier(BaseUnsupervisedClassifier):
 
     def inference(self, input_ids) -> list:
         return self.viterbi_log(input_ids)
+    
+    def logify(self):
+        self._normalize_log(self.transition_prob)
+        self._normalize_log(self.emission_prob)
 
     @staticmethod
     def _normalize(mat):
@@ -157,6 +162,9 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         """
         Train an HMM with the standard EM algorithm
         """
+        if not self.log_scale:
+            self.logify()
+            self.log_scale = True
         if not continue_training:
             if initial_guesses is None:
                 self.reset()
@@ -164,7 +172,8 @@ class HMMClassifier(BaseUnsupervisedClassifier):
                 A, B = initial_guesses
                 self.transition_prob = A
                 self.emission_prob = B
-        log_A, log_B = torch.log(self.transition_prob), torch.log(self.emission_prob)
+
+        log_A, log_B = self.transition_prob, self.emission_prob
         for _ in range(num_iter):
             expected_emissions = torch.zeros(self.num_states, self.num_obs)
             expected_transitions = torch.zeros(self.num_states, self.num_states)
@@ -222,7 +231,9 @@ class HMMClassifier(BaseUnsupervisedClassifier):
             self.transition_prob[0, 1:] = expected_initial
             self.transition_prob[1:, 1:] = expected_transitions / expected_state_counts[:, None]
             self.emission_prob = expected_emissions / expected_state_counts[:, None]
-        # self.log_scale = True
+            self.logify()
+
+   
     def lookup_emission(self, emission: str) -> int:
         if emission in self.emission_lookup:
             return self.emission_lookup[emission]
@@ -241,7 +252,15 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         """
         Train an HMM with the hard EM algorithm (also called Viterbi EM)
         """
-        self.log_scale = False
+        
+        if not self.log_scale:
+            self.logify()
+            self.log_scale = True
+        if not continue_training:
+            if initial_guesses:
+                self.transition_prob, self.emission_prob = initial_guesses
+            else:
+                self.reset()
         for _ in range(num_iter):
             emis_counts = torch.zeros(self.num_states, self.num_obs)
             trans_counts = torch.zeros(self.num_states+1, self.num_states+1)
@@ -253,10 +272,9 @@ class HMMClassifier(BaseUnsupervisedClassifier):
                     emis_counts[path[t], obs[t]] += 1
                 for t in range(T):
                     trans_counts[path[t], path[t+1]] += 1
-            self._normalize(emis_counts)
-            self._normalize(trans_counts)
-            self.emission_prob = emis_counts
-            self.transition_prob = trans_counts
+            self.transition_prob, self.emission_prob = emis_counts, trans_counts
+            self.logify()
+
 
 
 
@@ -273,7 +291,84 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         """
         Train an HMM with a stepwise online EM algorithm
         """
-        self.log_scale = True
+
+        if not self.log_scale:
+            self.logify()
+            self.log_scale = True
+        if not continue_training:
+            if initial_guesses is None:
+                self.reset()
+            else:
+                A, B = initial_guesses
+                self.transition_prob = A
+                self.emission_prob = B
+
+        for _ in range(num_iter):
+
+            expected_transitions = torch.zeros(self.num_states, self.num_states)
+            expected_state_counts = torch.zeros(self.num_states)
+            expected_emissions = torch.zeros(self.num_states, self.num_obs)
+            expected_initial = torch.zeros(self.num_states)
+            for i, eg in enumerate(inputs):
+                log_A, log_B = self.transition_prob, self.emission_prob
+                seq = eg["tokens"]
+                n = len(seq)
+                obs = eg["input_ids"]
+                log_alpha = torch.full((n, self.num_states+1), float('-inf'))
+                log_alpha[0, 1:] = log_A[0, 1:] + log_B[:, obs[0]]
+                for t in range(1, n):
+                    log_scores = log_alpha[t-1].unsqueeze(1) + log_A
+                    log_alpha[t] = torch.logsumexp(log_scores[:, 1:], dim=0) + log_B[:, obs[t]]
+                log_beta = torch.full((n, self.num_states+1), float('-inf'))
+                log_beta[n-1, 1:] = 0.0 
+                for t in range(n-2, -1, -1):
+                    log_scores = log_beta[t+1].unsqueeze(1) + log_B[:, obs[t+1]] + log_A
+                    log_beta[t] = torch.logsumexp(log_scores[:, 1:], dim=0)
+                log_unnorm_gamma = log_alpha[:, 1:] + log_beta[:, 1:]
+                log_Z = torch.logsumexp(log_unnorm_gamma, dim=1, keepdim=True)
+                log_gamma = log_unnorm_gamma - log_Z
+            
+                log_alpha_real = log_alpha[:, 1:]       
+                log_beta_real  = log_beta[:, 1:]       
+
+                log_alpha_t = log_alpha_real[:-1]     
+                log_beta_t1 = log_beta_real[1:]       
+
+        
+                log_emit_next = log_B[:, obs[1:]].T   
+
+                log_unnorm_xi = (
+                    log_alpha_t.unsqueeze(2)         
+                    + log_A.unsqueeze(0)              
+                    + log_emit_next.unsqueeze(1)       
+                    + log_beta_t1.unsqueeze(1)         
+                )                                     
+
+                log_Z = torch.logsumexp(log_unnorm_xi, dim=(1, 2), keepdim=True)
+                log_xi = log_unnorm_xi - log_Z      
+                gamma, xi = torch.exp(log_gamma), torch.exp(log_xi)
+                ex_state_counts = gamma.sum(dim=0)
+                ex_transitions = xi.sum(dim=0)
+        
+                ex_initial = gamma[0]
+                ex_emissions = torch.zeros(self.num_states, self.num_obs)
+                ex_emissions.scatter_add(
+                    1, # dimension
+                    obs.unsqueeze(0).expand(self.num_states, -1),
+                    gamma.T
+                )
+                rate = eta_fn(i+1)
+                expected_emissions = (1-rate) * expected_emissions + rate * ex_emissions
+                expected_state_counts = (1-rate) * expected_state_counts + rate * ex_state_counts
+                expected_initial = (1-rate) * expected_initial + ex_initial
+                expected_transitions = (1-rate) * expected_transitions + ex_transitions
+
+                # M step (done after each input)
+                self.transition_prob[0, 1:] = expected_initial
+                self.transition_prob[1:, 1:] = expected_transitions / expected_state_counts[:, None]
+                self.emission_prob = expected_emissions / expected_state_counts[:, None]
+                # log
+                self.logify()
 
     def viterbi(self, input_ids):
         """Run Viterbi algorithm"""
@@ -281,33 +376,65 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         # Viterbi algorithm
         optimal_path = []
         V = torch.zeros(self.num_states + 1, len(input_ids) + 1)
-        path = {}
         V[:, 0] = self.transition_prob[0, :]
+        ptr = torch.zeros(self.num_states + 1, len(input_ids) + 1)
+        for t in range(1, len(input_ids)+1):
+            for i in range(self.num_states + 1):
+                cur_max = float("-inf")
+                for j in range(self.num_states + 1):
+                    prob = self.transition_prob[j, i] * V[j, t-1] * self.emission_prob[i][input_ids[t-1]]
+                    if prob > cur_max:
+                        cur_max = prob
+                        ptr = j
+                V[i, t] = prob
+                ptr[t, i] = j
 
         # Complete the code here
+        cur_max = float("-inf")
+        last_state = -1
+        for i in range(self.num_states + 1):
+            if V[i, len(input_ids)] > cur_max:
+                cur_max = V[i, len(input_ids)]
+                last_state = i
+        optimal_path = [i]
+        for t in range(len(input_ids), -1, -1):
+            last_state = ptr[t, last_state]
+            optimal_path.append(last_state)
 
-        for t in range(len(input_ids), 1, -1):
-            last_state = path[last_state.item(), t]
-            optimal_path.insert(0, last_state.item())
-
+        optimal_path.reverse()
         return optimal_path
 
     def viterbi_log(self, input_ids):
         """Run Viterbi algorithm with log-scale probabilities"""
         assert self.log_scale
         # Viterbi algorithm
-        V = torch.zeros(self.num_states + 1, len(input_ids) + 1)
-        path = {}
+        optimal_path = []
+        V = torch.fill((self.num_states + 1, len(input_ids) + 1), -1 * math.inf)
         V[:, 0] = self.transition_prob[0, :]
+        ptr = torch.zeros(self.num_states + 1, len(input_ids) + 1)
+        for t in range(1, len(input_ids)+1):
+            for i in range(self.num_states + 1):
+                cur_max = float("-inf")
+                for j in range(self.num_states + 1):
+                    log_prob = self.transition_prob[j, i] + V[j, t-1] + self.emission_prob[i][input_ids[t-1]]
+                    if log_prob > cur_max:
+                        cur_max = log_prob
+                        ptr = j
+                V[i, t] = log_prob
+                ptr[t, i] = j
 
         # Complete the code here
+        cur_max = float("-inf")
+        last_state = -1
+        for i in range(self.num_states + 1):
+            if V[i, len(input_ids)] > cur_max:
+                cur_max = V[i, len(input_ids)]
+                last_state = i
+        optimal_path = [i]
+        for t in range(len(input_ids), -1, -1):
+            last_state = ptr[t, last_state]
+            optimal_path.append(last_state)
 
-        optimal_path = []
-        last_state = torch.argmax(V[1:, -1]) + 1
-        optimal_path.append(last_state.item())
-
-        for t in range(len(input_ids), 1, -1):
-            last_state = path[last_state.item(), t]
-            optimal_path.insert(0, last_state.item())
-
+        optimal_path.reverse()
         return optimal_path
+

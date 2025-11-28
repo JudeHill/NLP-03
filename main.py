@@ -15,6 +15,7 @@ if __name__ == "__main__":
     args = arg_parsing()
     if args["model"] == "kmeans":
         # Complete your code here
+        print("Not implemented")
     else:
         method = args["model"].split("-")[-1]
         if args["action"] == "train-test":

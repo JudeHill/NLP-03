@@ -13,7 +13,7 @@ logger = logging.getLogger()
 
 
 class HMMClassifier(BaseUnsupervisedClassifier):
-    def __init__(self, num_states, num_obs):
+    def __init__(self, num_states, num_obs, device=None):
         """
         For N hidden states and M observations,
             transition_prob: (N+1) * (N+1), with [0, :] as initial probabilities
@@ -23,25 +23,29 @@ class HMMClassifier(BaseUnsupervisedClassifier):
             num_states: number of hidden states
             num_obs: number of observations
         """
+        self.device = device or torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu"
+        )
         self.num_states = num_states
         self.num_obs = num_obs
         # Initialized to epsilon, so allowing unseen transition/emission to have p>0
         self.epsilon = 1e-5
         self.transition_prob = torch.full(
-            [self.num_states + 1, self.num_states + 1], self.epsilon
+            [self.num_states + 1, self.num_states + 1], self.epsilon,
+            device=self.device
         )
         self.transition_prob[:, 0] = 0.0
-        self.emission_prob = torch.full([self.num_states, self.num_obs], self.epsilon)
+        self.emission_prob = torch.full([self.num_states, self.num_obs], self.epsilon, device=self.device)
         self.log_scale = False
         self.cnt = 0  # Number of updates in sEM
         # TODO: optimize training by using UNK token
 
     def reset(self):
         self.transition_prob = torch.full(
-            [self.num_states + 1, self.num_states + 1], self.epsilon
+            [self.num_states + 1, self.num_states + 1], self.epsilon, device=self.device
         )
         self.transition_prob[:, 0] = 0.0
-        self.emission_prob = torch.full([self.num_states, self.num_obs], self.epsilon)
+        self.emission_prob = torch.full([self.num_states, self.num_obs], self.epsilon,device=self.device)
         self.log_scale = False
         self.cnt = 0
         self.emission_lookup = {}
@@ -175,24 +179,31 @@ class HMMClassifier(BaseUnsupervisedClassifier):
 
         log_A, log_B = self.transition_prob, self.emission_prob
         for _ in range(num_iter):
-            expected_emissions = torch.zeros(self.num_states, self.num_obs)
-            expected_transitions = torch.zeros(self.num_states, self.num_states)
-            expected_state_counts = torch.zeros(self.num_states)
-            expected_initial = torch.zeros(self.num_states)
+            expected_emissions = torch.zeros(self.num_states, self.num_obs, device=self.device)
+            expected_transitions = torch.zeros(self.num_states, self.num_states, device=self.device)
+            expected_state_counts = torch.zeros(self.num_states, device=self.device)
+            expected_initial = torch.zeros(self.num_states, device=self.device)
             for eg in inputs:
-                seq = eg["tokens"]
-                n = len(seq)
+                
                 obs = eg["input_ids"]
-                log_alpha = torch.full((n, self.num_states+1), float('-inf'))
+                n = len(obs)
+                
+                obs = torch.tensor(obs, dtype=torch.long, device=self.device)
+
+                log_alpha = torch.full((n, self.num_states+1), float('-inf'), device=self.device)
                 log_alpha[0, 1:] = log_A[0, 1:] + log_B[:, obs[0]]
                 for t in range(1, n):
                     log_scores = log_alpha[t-1].unsqueeze(1) + log_A
-                    log_alpha[t] = torch.logsumexp(log_scores[:, 1:], dim=0) + log_B[:, obs[t]]
-                log_beta = torch.full((n, self.num_states+1), float('-inf'))
+                    log_alpha[t, 1:] = torch.logsumexp(log_scores[:, 1:], dim=0) + log_B[:, obs[t]]
+                log_beta = torch.full((n, self.num_states+1), float('-inf'), device=self.device)
                 log_beta[n-1, 1:] = 0.0 
+                log_A_real = log_A[1:, 1:] 
                 for t in range(n-2, -1, -1):
-                    log_scores = log_beta[t+1].unsqueeze(1) + log_B[:, obs[t+1]] + log_A
-                    log_beta[t] = torch.logsumexp(log_scores[:, 1:], dim=0)
+                    log_emit_next = log_B[:, obs[t+1]]       
+                    log_future = log_emit_next + log_beta[t+1, 1:]    
+                    log_scores = log_A_real + log_future.unsqueeze(0) 
+                    log_beta[t, 1:] = torch.logsumexp(log_scores, dim=1)
+
                 log_unnorm_gamma = log_alpha[:, 1:] + log_beta[:, 1:]
                 log_Z = torch.logsumexp(log_unnorm_gamma, dim=1, keepdim=True)
                 log_gamma = log_unnorm_gamma - log_Z
@@ -205,10 +216,10 @@ class HMMClassifier(BaseUnsupervisedClassifier):
 
         
                 log_emit_next = log_B[:, obs[1:]].T   
-
+                log_A_real = log_A[1:, 1:] 
                 log_unnorm_xi = (
                     log_alpha_t.unsqueeze(2)         
-                    + log_A.unsqueeze(0)              
+                    + log_A_real.unsqueeze(0)              
                     + log_emit_next.unsqueeze(1)       
                     + log_beta_t1.unsqueeze(1)         
                 )                                     
@@ -221,7 +232,7 @@ class HMMClassifier(BaseUnsupervisedClassifier):
 
                 expected_initial += gamma[0]
                 
-                expected_emissions.scatter_add(
+                expected_emissions.scatter_add_(
                     1, # dimension
                     obs.unsqueeze(0).expand(self.num_states, -1),
                     gamma.T
@@ -262,8 +273,8 @@ class HMMClassifier(BaseUnsupervisedClassifier):
             else:
                 self.reset()
         for _ in range(num_iter):
-            emis_counts = torch.zeros(self.num_states, self.num_obs)
-            trans_counts = torch.zeros(self.num_states+1, self.num_states+1)
+            emis_counts = torch.zeros(self.num_states, self.num_obs, device=self.device)
+            trans_counts = torch.zeros(self.num_states+1, self.num_states+1, device=self.device)
             for eg in inputs:
                 obs = eg["input_ids"]
                 path = self.viterbi_log(obs)
@@ -305,21 +316,23 @@ class HMMClassifier(BaseUnsupervisedClassifier):
 
         for _ in range(num_iter):
 
-            expected_transitions = torch.zeros(self.num_states, self.num_states)
-            expected_state_counts = torch.zeros(self.num_states)
-            expected_emissions = torch.zeros(self.num_states, self.num_obs)
-            expected_initial = torch.zeros(self.num_states)
+            expected_transitions = torch.zeros(self.num_states, self.num_states, device=self.device)
+            expected_state_counts = torch.zeros(self.num_states, device=self.device)
+            expected_emissions = torch.zeros(self.num_states, self.num_obs, device=self.device)
+            expected_initial = torch.zeros(self.num_states, device=self.device)
             for i, eg in enumerate(inputs):
                 log_A, log_B = self.transition_prob, self.emission_prob
-                seq = eg["tokens"]
-                n = len(seq)
+                
                 obs = eg["input_ids"]
-                log_alpha = torch.full((n, self.num_states+1), float('-inf'))
+                n = len(obs)
+                
+                obs = torch.tensor(obs, dtype=torch.long, device=self.device)
+                log_alpha = torch.full((n, self.num_states+1), float('-inf'), device=self.device)
                 log_alpha[0, 1:] = log_A[0, 1:] + log_B[:, obs[0]]
                 for t in range(1, n):
                     log_scores = log_alpha[t-1].unsqueeze(1) + log_A
                     log_alpha[t] = torch.logsumexp(log_scores[:, 1:], dim=0) + log_B[:, obs[t]]
-                log_beta = torch.full((n, self.num_states+1), float('-inf'))
+                log_beta = torch.full((n, self.num_states+1), float('-inf'), device=self.device)
                 log_beta[n-1, 1:] = 0.0 
                 for t in range(n-2, -1, -1):
                     log_scores = log_beta[t+1].unsqueeze(1) + log_B[:, obs[t+1]] + log_A
@@ -351,8 +364,8 @@ class HMMClassifier(BaseUnsupervisedClassifier):
                 ex_transitions = xi.sum(dim=0)
         
                 ex_initial = gamma[0]
-                ex_emissions = torch.zeros(self.num_states, self.num_obs)
-                ex_emissions.scatter_add(
+                ex_emissions = torch.zeros(self.num_states, self.num_obs, device=self.device)
+                ex_emissions.scatter_add_(
                     1, # dimension
                     obs.unsqueeze(0).expand(self.num_states, -1),
                     gamma.T
@@ -375,9 +388,9 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         assert not self.log_scale
         # Viterbi algorithm
         optimal_path = []
-        V = torch.zeros(self.num_states + 1, len(input_ids) + 1)
+        V = torch.zeros(self.num_states + 1, len(input_ids) + 1, device=self.device)
         V[:, 0] = self.transition_prob[0, :]
-        ptr = torch.zeros(self.num_states + 1, len(input_ids) + 1)
+        ptr = torch.zeros(self.num_states + 1, len(input_ids) + 1, device=self.device)
         for t in range(1, len(input_ids)+1):
             for i in range(self.num_states + 1):
                 cur_max = float("-inf")
@@ -409,9 +422,9 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         assert self.log_scale
         # Viterbi algorithm
         optimal_path = []
-        V = torch.fill((self.num_states + 1, len(input_ids) + 1), -1 * math.inf)
+        V = torch.full((self.num_states + 1, len(input_ids) + 1), -1 * math.inf, device=self.device)
         V[:, 0] = self.transition_prob[0, :]
-        ptr = torch.zeros(self.num_states + 1, len(input_ids) + 1)
+        ptr = torch.zeros(self.num_states + 1, len(input_ids) + 1, device=self.device)
         for t in range(1, len(input_ids)+1):
             for i in range(self.num_states + 1):
                 cur_max = float("-inf")

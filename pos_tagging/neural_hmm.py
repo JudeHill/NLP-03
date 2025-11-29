@@ -43,14 +43,7 @@ class NeuralHMMClassifier(nn.Module):
             log_A: (K, K) log transition probabilities,
                    log_A[i, j] = log p(z_t=j | z_{t-1}=i).
         """
-        # 1. Compute a hidden vector from query (maybe identity)
-        # h = self.trans_query            # (D,)
-        # 2. Pass through linear -> (K*K,)
-        # logits = self.trans_linear(h)   # (K*K,)
-        # 3. Reshape to (K, K)
-        # logits = logits.view(self.num_states, self.num_states)
-        # 4. Row-wise log-softmax for transitions
-        # log_A = F.log_softmax(logits, dim=1)
+
         h = self.trans_query
         logits = self.trans_linear(h)
         logits = logits.view(self.num_states, self.num_states)
@@ -90,7 +83,17 @@ class NeuralHMMClassifier(nn.Module):
             log_alpha: (T, K) log forward probabilities.
         """
         # Standard log-space forward recursion
-        ...
+        T = emissions.shape[0]
+        K = log_pi.shape[0]
+        log_alpha = emissions.new_full((T, K), fill_value=float("-inf"), dtype=log_pi.dtype)
+        e0 = emissions[0]
+        log_alpha[0] = log_pi + log_B[:, e0]
+        for t in range(1, T):
+            et = emissions[t]
+            scores = log_alpha[t - 1].unsqueeze(1) + log_A  # (K, 1) + (K, K) -> (K, K)
+            log_alpha[t] = torch.logsumexp(scores, dim=0) + log_B[:, et]
+
+        return log_alpha
     
     def forward_backward(
         self,
@@ -105,46 +108,113 @@ class NeuralHMMClassifier(nn.Module):
         Returns:
             log_alpha: (T, K)
             log_beta:  (T, K)
-            log_gamma: (T, K)   # state posteriors log P(z_t | x)
-            log_xi:    (T-1, K, K)  # transition posteriors log P(z_t=i,z_{t+1}=j | x)
-            log_likelihood: ()  # scalar
+            log_gamma: (T, K)
+            log_xi:    (T-1, K, K)
+            log_likelihood: ()
         """
-        # 1. log_alpha = forward_algorithm(...)
-        # 2. log_beta  = backward_algorithm(...)
-        # 3. log_gamma from log_alpha + log_beta
-        # 4. log_xi from α, β, log_A, log_B, emissions
-        # 5. log_likelihood = logsumexp(log_alpha[-1])
-        ...
-    
-    # ---- Main forward: compute loss on a batch of sentences ----
+        T = emissions.shape[0]
+        K = log_pi.shape[0]
+
+        log_alpha = self.forward_algorithm(emissions, log_pi, log_A, log_B)  # (T, K)
+        log_beta  = self.backward_algorithm(emissions, log_pi, log_A, log_B)  # (T, K)
+        log_likelihood = torch.logsumexp(log_alpha[-1], dim=-1)  # scalar
+
+        log_gamma_unnorm = log_alpha + log_beta  # (T, K)
+        log_gamma = log_gamma_unnorm - torch.logsumexp(log_gamma_unnorm, dim=1, keepdim=True)
+        # xi_t(i,j) ∝ α_t(i) + log_A[i,j] + log_B[j, x_{t+1}] + β_{t+1}(j)
+        log_xi = emissions.new_empty((T - 1, K, K), dtype=log_pi.dtype)
+
+        for t in range(T - 1):
+            et1 = emissions[t + 1]
+            log_xi_t = (
+                log_alpha[t].unsqueeze(1)              # (K, 1)
+                + log_A                                # (K, K)
+                + log_B[:, et1].unsqueeze(0)           # (1, K)
+                + log_beta[t + 1].unsqueeze(0)         # (1, K)
+            )
+            log_xi[t] = log_xi_t - torch.logsumexp(log_xi_t.view(-1), dim=0)
+
+        return log_alpha, log_beta, log_gamma, log_xi, log_likelihood
+
 
     def forward(self, batch_emissions: torch.Tensor) -> torch.Tensor:
         """
-        batch_emissions: (B, T) padded integer word indices.
+        batch_emissions: (B, T)
+        Every sequence has length T. No padding tokens.
 
         Returns:
-            loss: scalar = negative log-likelihood over batch.
+            loss: scalar = negative average log-likelihood over batch.
         """
-        # 1. Compute log_pi, log_A, log_B from neural nets once per batch
-        # log_pi = self.compute_initial_log_probs()
-        # log_A  = self.compute_transition_log_probs()
-        # log_B  = self.compute_emission_log_probs()
+        device = batch_emissions.device
+        B, T = batch_emissions.shape
 
-        # 2. For each sequence in batch:
-        #    - run forward algorithm (or forward_backward)
-        #    - sum log-likelihoods
-        # 3. Return negative average log-likelihood as loss
-        ...
+        # 1. Compute log parameters once per batch
+        log_pi = self.compute_initial_log_probs()     # (K,)
+        log_A  = self.compute_transition_log_probs()  # (K, K)
+        log_B  = self.compute_emission_log_probs()    # (K, V)
+
+        total_log_likelihood = torch.tensor(0.0, device=device)
+
+        for b in range(B):
+            emissions = batch_emissions[b]            # (T,)
+            log_alpha = self.forward_algorithm(emissions, log_pi, log_A, log_B)
+
+            # log p(x_1:T) = logsumexp over final log_alpha
+            seq_log_likelihood = torch.logsumexp(log_alpha[-1], dim=-1)
+            total_log_likelihood += seq_log_likelihood
+
+        # Negative average log-likelihood over the batch
+        loss = - total_log_likelihood / B
+        return loss
+
+    def backward_algorithm(
+        self,
+        emissions: torch.Tensor,
+        log_pi: torch.Tensor,
+        log_A: torch.Tensor,
+        log_B: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        emissions: (T,)
+        Returns:
+            log_beta: (T, K)
+        """
+        T = emissions.shape[0]
+        K = log_pi.shape[0]
+
+        log_beta = emissions.new_full((T, K), fill_value=float("-inf"), dtype=log_pi.dtype)
+
+        # Initialization: β_T-1(k) = 0 in log space
+        log_beta[-1] = 0.0
+
+        for t in range(T - 2, -1, -1):
+            et1 = emissions[t + 1]  # x_{t+1}
+
+            # log_beta[t, i] = logsum_j A[i,j] + log_B[j, x_{t+1}] + log_beta[t+1, j]
+            scores = log_A + log_B[:, et1] + log_beta[t + 1]  # (K, K)
+            # scores[i, j] = log_A[i, j] + log_B[j, x_{t+1}] + log_beta[t+1, j]
+
+            log_beta[t] = torch.logsumexp(scores, dim=1)  # sum over j
+
+        return log_beta
+
     
     # ---- Optional: function to get posteriors for analysis ----
+
 
     def infer_posteriors(self, emissions: torch.Tensor):
         """
         Convenience method to return γ and ξ for a single sequence,
         for analysis or EM-style updates if desired.
         """
-        # log_pi, log_A, log_B = ...
-        # return self.forward_backward(emissions, log_pi, log_A, log_B)
-        ...
+        log_pi = self.compute_initial_log_probs()
+        log_A  = self.compute_transition_log_probs()
+        log_B  = self.compute_emission_log_probs()
+
+        _, _, log_gamma, log_xi, log_likelihood = self.forward_backward(
+            emissions, log_pi, log_A, log_B
+        )
+        return log_gamma, log_xi, log_likelihood
+
 
 

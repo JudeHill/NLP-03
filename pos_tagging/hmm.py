@@ -6,6 +6,7 @@ import numpy as np
 import torch
 from datasets import Dataset
 from tqdm import tqdm
+import pos_tagging.gpu_check as gpu_check
 
 from pos_tagging.base import BaseUnsupervisedClassifier
 
@@ -26,6 +27,8 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         self.device = device or torch.device(
             "cuda" if torch.cuda.is_available() else "cpu"
         )
+        print(f"Using device {self.device}")
+        gpu_check.check()
         self.num_states = num_states
         self.num_obs = num_obs
         self.epsilon = 1e-12
@@ -78,9 +81,11 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         return self.viterbi_log(input_ids)
     
     def logify(self):
-        self._normalize_log(self.transition_prob)
-        self._normalize_log(self.emission_prob)
+        # if they’re counts, convert to prob then log-normalize:
+        self.transition_prob = self._log_normalize(torch.log(self.transition_prob))
+        self.emission_prob   = self._log_normalize(torch.log(self.emission_prob))
         self.log_scale = True
+
 
     @staticmethod
     def _normalize(mat):

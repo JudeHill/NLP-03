@@ -2,6 +2,8 @@ from pos_tagging.base import BaseUnsupervisedClassifier
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import pos_tagging.gpu_check as gpu_check
+
 
 
 class NeuralHMMClassifier(nn.Module):
@@ -12,9 +14,12 @@ class NeuralHMMClassifier(nn.Module):
         vocab_size: int,
         tag_emb_dim: int = 128,
         trans_hidden_dim: int = 128,
+        
     ):
         super().__init__()
-
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"Using device {self.device}")
+        gpu_check.check()
         self.init_logits = nn.Parameter(torch.zeros(num_states))
         self.tag_embed = nn.Embedding(num_states, tag_emb_dim)
         self.word_embed = nn.Embedding(vocab_size, tag_emb_dim)
@@ -31,6 +36,7 @@ class NeuralHMMClassifier(nn.Module):
         self.vocab_size = vocab_size
         self.tag_emb_dim = tag_emb_dim
         self.trans_hidden_dim = trans_hidden_dim
+        
 
     def compute_initial_log_probs(self) -> torch.Tensor:
         """
@@ -147,7 +153,9 @@ class NeuralHMMClassifier(nn.Module):
         Returns:
             loss: scalar = negative average log-likelihood over batch.
         """
-        device = batch_emissions.device
+        self.to(self.device)
+        batch_emissions = batch_emissions.to(self.device)
+
         B, T = batch_emissions.shape
 
         # 1. Compute log parameters once per batch
@@ -155,7 +163,7 @@ class NeuralHMMClassifier(nn.Module):
         log_A  = self.compute_transition_log_probs()  # (K, K)
         log_B  = self.compute_emission_log_probs()    # (K, V)
 
-        total_log_likelihood = torch.tensor(0.0, device=device)
+        total_log_likelihood = torch.tensor(0.0, device=self.device)
 
         for b in range(B):
             emissions = batch_emissions[b]            # (T,)
@@ -209,6 +217,9 @@ class NeuralHMMClassifier(nn.Module):
         Convenience method to return γ and ξ for a single sequence,
         for analysis or EM-style updates if desired.
         """
+        self.to(self.device)
+        emissions = emissions.to(self.device)
+
         log_pi = self.compute_initial_log_probs()
         log_A  = self.compute_transition_log_probs()
         log_B  = self.compute_emission_log_probs()
@@ -217,6 +228,57 @@ class NeuralHMMClassifier(nn.Module):
             emissions, log_pi, log_A, log_B
         )
         return log_gamma, log_xi, log_likelihood
+    
+    def inference(self, input_ids: torch.Tensor) -> torch.Tensor:
+        """
+        Perform inference (tag prediction) for one or many sequences.
 
+        Args:
+            input_ids: (T,) or (B, T) tensor of word indices.
 
+        Returns:
+            preds: (T,) if input was (T,)
+                   (B, T) if input was (B, T)
+        """
+        self.to(self.device)
+        self.eval()
 
+        with torch.no_grad():
+            single = False
+
+            # If input is a single sequence (T,), turn into (1, T)
+            if input_ids.dim() == 1:
+                input_ids = input_ids.unsqueeze(0)
+                single = True
+
+            input_ids = input_ids.to(self.device)
+            B, T = input_ids.shape
+
+            # Compute HMM parameters once
+            log_pi = self.compute_initial_log_probs()
+            log_A  = self.compute_transition_log_probs()
+            log_B  = self.compute_emission_log_probs()
+
+            all_preds = []
+
+            for b in range(B):
+                emissions = input_ids[b]  # (T,)
+
+                # get posteriors
+                _, _, log_gamma, _, _ = self.forward_backward(
+                    emissions, log_pi, log_A, log_B
+                )
+
+                # predicted state = most likely hidden state per position
+                preds_b = torch.argmax(log_gamma, dim=1)  # (T,)
+                all_preds.append(preds_b)
+
+            preds = torch.stack(all_preds, dim=0)  # (B, T)
+
+            # If single sequence was provided, return shape (T,)
+            if single:
+                return preds[0]
+
+            return preds
+
+    

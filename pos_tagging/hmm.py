@@ -28,6 +28,7 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         )
         self.num_states = num_states
         self.num_obs = num_obs
+        self.epsilon = 1e-12
         # Initialized to epsilon, so allowing unseen transition/emission to have p>0
         A = torch.rand(self.num_states + 1, self.num_states + 1, device=self.device)
         A[:, 0] = 0.0
@@ -39,15 +40,11 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         # TODO: optimize training by using UNK token
 
     def reset(self):
-        self.transition_prob = torch.full(
-            [self.num_states + 1, self.num_states + 1], self.epsilon, device=self.device
-        )
-        self.transition_prob[:, 0] = 0.0
-        self.emission_prob = torch.full([self.num_states, self.num_obs], self.epsilon,device=self.device)
-        self.log_scale = False
-        self.cnt = 0
-        self.emission_lookup = {}
-        self.emission_index = 0
+        A = torch.rand(self.num_states + 1, self.num_states + 1, device=self.device)
+        A[:, 0] = 0.0
+        B = torch.rand(self.num_states, self.num_obs, device=self.device)
+        self.transition_prob = A
+        self.emission_prob = B
         self.logify()
 
     def train(

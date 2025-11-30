@@ -25,6 +25,8 @@ class NeuralHMMClassifier(nn.Module):
             trans_hidden_dim, num_states * num_states
         )
 
+        self.trans_query = nn.Parameter(torch.zeros(trans_hidden_dim))
+
         self.num_states = num_states
         self.vocab_size = vocab_size
         self.tag_emb_dim = tag_emb_dim

@@ -5,7 +5,7 @@ import os
 def arg_parsing():
     argparser = argparse.ArgumentParser()
     ACTIONS = ["train-test", "test"]
-    MODELS = ["hmm-mle", "hmm-EM", "hmm-sEM", "hmm-hardEM", "kmeans"]
+    MODELS = ["hmm-mle", "hmm-EM", "hmm-sEM", "hmm-hardEM", "nhmm", "kmeans"]
     TAGS = ["upos", "xpos"]
     argparser.add_argument(
         "action",

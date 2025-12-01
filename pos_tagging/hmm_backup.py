@@ -237,25 +237,14 @@ class HMMClassifier(BaseUnsupervisedClassifier):
 
             # M step (done after all inputs processed)
             # After computing expected_initial (counts) in linear space:
-            trans_counts = torch.full_like(self.transition_prob, self.epsilon)
+            trans_counts = torch.zeros_like(self.transition_prob)
             trans_counts[:, 0] = 0.0
             trans_counts[0, 1:] += expected_initial  # shape (S,)
-            trans_counts[1:, 1:] += expected_transitions  # shape (S, S)
-            emis_counts = torch.full_like(self.emission_prob, self.epsilon)
-            emis_counts += expected_emissions  # add expected emission counts
+            trans_counts[1:, 1:] += expected_transitions  # shape (S, S)  
             self.transition_prob.copy_(trans_counts)
-            self.emission_prob.copy_(emis_counts)
+            self.emission_prob.copy_(expected_emissions)
             self.logify()
 
-
-   
-    def lookup_emission(self, emission: str) -> int:
-        if emission in self.emission_lookup:
-            return self.emission_lookup[emission]
-        else:
-            self.emission_lookup[emission] = self.emission_index
-            self.emission_index += 1
-            return self.emission_index
 
     def train_EM_hard_log(
         self,

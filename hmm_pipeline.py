@@ -5,7 +5,7 @@ import torch
 from datasets import DatasetDict
 from tqdm import tqdm
 
-from pos_tagging.hmm import HMMClassifier
+from pos_tagging.hmm_new import HMMClassifier
 from preprocess_dataset import *
 from utils import calculate_v_measure, calculate_variation_of_information
 

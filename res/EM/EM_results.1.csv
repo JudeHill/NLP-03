@@ -1,0 +1,101 @@
+id,sentence,VI,normalized-VI,homogeneity,completeness,V-score
+0,-,4.317412050542582,1.0,0.0,1.0,0.0
+1,"In an Oct. 19 review of `` The Misanthrope '' at Chicago 's Goodman Theatre -LRB- `` Revitalized Classics Take the Stage in Windy City , '' Leisure & Arts -RRB- , the role of Celimene , played by Kim Cattrall , was mistakenly attributed to Christina Haag .",3.738627175014443,1.0,0.0,1.0,0.0
+2,Ms. Haag plays Elianti .,1.3709505944546687,1.0,0.0,1.0,0.0
+3,"Rolls-Royce Motor Cars Inc. said it expects its U.S. sales to remain steady at about 1,200 cars in 1990 .",3.4841837197791885,1.0,0.0,1.0,0.0
+4,"The luxury auto maker last year sold 1,214 cars in the U.S.",2.751629167387823,1.0,0.0,1.0,0.0
+5,"Howard Mosher , president and chief executive officer , said he anticipates growth for the luxury auto maker in Britain and Europe , and in Far Eastern markets .",3.248634979160086,1.0,0.0,1.0,0.0
+6,BELL INDUSTRIES Inc. increased its quarterly to 10 cents from seven cents a share .,3.1898980954642875,1.0,0.0,1.0,0.0
+7,The new rate will be payable Feb. 15 .,2.94770277922009,1.0,0.0,1.0,0.0
+8,A record date has n't been set .,2.5,1.0,0.0,1.0,0.0
+9,"Bell , based in Los Angeles , makes and distributes electronic , computer and building products .",3.1751231351134614,1.0,0.0,1.0,0.0
+10,Investors are appealing to the Securities and Exchange Commission not to limit their access to information about stock purchases and sales by corporate insiders .,3.7034651896016464,1.0,0.0,1.0,0.0
+11,"A SEC proposal to ease reporting requirements for some company executives would undermine the usefulness of information on insider trades as a stock-picking tool , individual investors and professional money managers contend .",3.275772059461475,1.0,0.0,1.0,0.0
+12,"They make the argument in letters to the agency about rule changes proposed this past summer that , among other things , would exempt many middle-management executives from reporting trades in their own companies ' shares .",3.5465942457551543,1.0,0.0,1.0,0.0
+13,The proposed changes also would allow executives to report exercises of options later and less often .,3.2639334294856344,1.0,0.0,1.0,0.0
+14,Many of the letters maintain that investor confidence has been so shaken by the 1987 stock market crash -- and the markets already so stacked against the little guy -- that any decrease in information on insider-trading patterns might prompt individuals to get out of stocks altogether .,3.5409388770033496,1.0,0.0,1.0,0.0
+15,"`` The SEC has historically paid obeisance to the ideal of a level playing field , '' wrote Clyde S. McGregor of Winnetka , Ill. , in one of the 92 letters the agency has received since the changes were proposed Aug. 17 .",3.6720406433169748,1.0,0.0,1.0,0.0
+16,`` Apparently the commission did not really believe in this ideal . '',3.0269868333592873,1.0,0.0,1.0,0.0
+17,"Currently , the rules force executives , directors and other corporate insiders to report purchases and sales of their companies ' shares within about a month after the transaction .",3.41506101220307,1.0,0.0,1.0,0.0
+18,"But about 25 % of the insiders , according to SEC figures , file their reports late .",3.6835423624332306,1.0,0.0,1.0,0.0
+19,"The changes were proposed in an effort to streamline federal bureaucracy and boost compliance by the executives `` who are really calling the shots , '' said Brian Lane , special counsel at the SEC 's office of disclosure policy , which proposed the changes .",4.014302782900043,1.0,0.0,1.0,0.0
+20,"Investors , money managers and corporate officials had until today to comment on the proposals , and the issue has produced more mail than almost any other issue in memory , Mr. Lane said .",3.7287244452691404,1.0,0.0,1.0,0.0
+21,"The SEC will probably vote on the proposal early next year , he said .",3.5068905956085183,1.0,0.0,1.0,0.0
+22,Not all those who wrote oppose the changes .,2.94770277922009,1.0,0.0,1.0,0.0
+23,"The Committee on Federal Regulation of Securities for the American Bar Association argues , for example , in its lengthy letter to the SEC , that the proposed changes `` would substantially improve the -LCB- law -RCB- by conforming it more closely to contemporary business realities . ''",4.091889648941849,1.0,0.0,1.0,0.0
+24,What the investors who oppose the proposed changes object to most is the effect they say the proposal would have on their ability to spot telltale `` clusters '' of trading activity -- buying or selling by more than one officer or director within a short period of time .,3.9501974240127042,1.0,0.0,1.0,0.0
+25,"According to some estimates , the rule changes would cut insider filings by more than a third .",3.266332639970623,1.0,0.0,1.0,0.0
+26,The SEC 's Mr. Lane vehemently disputed those estimates .,2.6464393446710153,1.0,0.0,1.0,0.0
+27,"The rules will eliminate filings policy-making divisions , such as sales , marketing , finance and research and development , Mr. Lane said .",3.4182958340544896,1.0,0.0,1.0,0.0
+28,"The proposed rules also would be tougher on the insiders still required to file reports , he said .",3.681880802803401,1.0,0.0,1.0,0.0
+29,Companies would be compelled to publish in annual proxy statements the names of insiders who fail to file reports on time .,3.317640005966217,1.0,0.0,1.0,0.0
+30,"Considered as a whole , Mr. Lane said , the filings required under the proposed rules `` will be at least as effective , if not more so , for investors following transactions . ''",3.8430101595548543,1.0,0.0,1.0,0.0
+31,"But Robert Gabele , president of Invest/Net , a North Miami , Fla. , company that packages and sells the insider-trading data , said the proposal is worded so vaguely that key officials may fail to file the reports .",3.8061983328100943,1.0,0.0,1.0,0.0
+32,"Many investors wrote asking the SEC to require insiders to report their purchases and sales immediately , not a month later .",3.6069367321753205,1.0,0.0,1.0,0.0
+33,"But Mr. Lane said that while the SEC regulates who files , the law tells them when to do so .",3.7489948035250955,1.0,0.0,1.0,0.0
+34,"Investors who want to change the required timing should write their representatives in Congress , he added .",3.94770277922009,1.0,0.0,1.0,0.0
+35,"The SEC would likely be amenable to legislation that required insiders to file transactions on a more timely basis , he said .",3.914866303883101,1.0,0.0,1.0,0.0
+36,"The nation 's largest pension fund , which oversees $ 80 billion for college employees , plans to offer two new investment options to its 1.2 million participants .",3.6864579450918105,1.0,0.0,1.0,0.0
+37,"The Teachers Insurance and Annuity Association-College Retirement Equities Fund said it will introduce a stock and bond fund that will invest in `` socially responsible '' companies , and a bond fund .",3.870786363200861,1.0,0.0,1.0,0.0
+38,"Both funds are expected to begin operation around March 1 , subject to Securities and Exchange Commission approval .",3.7871439606981383,1.0,0.0,1.0,0.0
+39,"For its employees to sign up for the options , a college also must approve the plan .",3.4613201402110083,1.0,0.0,1.0,0.0
+40,"Some 4,300 institutions are part of the pension fund .",2.6464393446710153,1.0,0.0,1.0,0.0
+41,"The new options carry out part of an agreement that the pension fund , under pressure to relax its strict participation rules and to provide more investment options , reached with the SEC in December .",3.669480211692214,1.0,0.0,1.0,0.0
+42,"The new `` social choice '' fund will shun securities of companies linked to South Africa , nuclear power and in some cases , Northern Ireland .",3.7080481500712317,1.0,0.0,1.0,0.0
+43,"Also excluded will be investments in companies with `` significant '' business stemming from weapons manufacture , alcoholic beverages or tobacco .",3.572623663895163,1.0,0.0,1.0,0.0
+44,"Sixty percent of the fund will be invested in stocks , with the rest going into bonds or short-term investments .",3.4632805178108104,1.0,0.0,1.0,0.0
+45,"The bond fund will invest in high-grade or medium-grade bonds , mortgages or asset-backed securities , including as much as 15 % in foreign securities .",3.4266160458809476,1.0,0.0,1.0,0.0
+46,"The fund also might buy and sell futures and options contracts , subject to approval by the New York State Insurance Department .",3.464234652726566,1.0,0.0,1.0,0.0
+47,"Under two new features , participants will be able to transfer money from the new funds to other investment funds or , if their jobs are terminated , receive cash from the funds .",3.6235087968145354,1.0,0.0,1.0,0.0
+48,"The investment choices offered by the pension fund currently are limited to a stock fund , an annuity and a money-market fund .",2.888360196298891,1.0,0.0,1.0,0.0
+49,"New Brunswick Scientific Co. , a maker of biotechnology instrumentation and equipment , said it adopted an anti-takeover plan giving shareholders the right to purchase shares at half price under certain conditions .",3.5089082265385416,1.0,0.0,1.0,0.0
+50,"The company said the plan , under review for some time , will protect shareholders against `` abusive takeover tactics .",3.196154780932867,1.0,0.0,1.0,0.0
+51,"W. Ed Tyler , 37 years old , a senior vice president at this printing concern , was elected president of its technology group , a new position .",3.3436310999243437,1.0,0.0,1.0,0.0
+52,"Solo woodwind players have to be creative if they want to work a lot , because their repertoire and audience appeal are limited .",3.4549868557726673,1.0,0.0,1.0,0.0
+53,"The oboist Heinz Holliger has taken a hard line about the problem : He commissions and splendidly interprets fearsome contemporary scores and does some conducting , so he does n't have to play the same Mozart and Strauss concertos over and over again .",3.75877431356206,1.0,0.0,1.0,0.0
+54,"Richard Stoltzman has taken a gentler , more audience-friendly approach .",3.2776134368191165,1.0,0.0,1.0,0.0
+55,"Years ago , he collaborated with the new music gurus Peter Serkin and Fred Sherry in the very countercultural chamber group Tashi , which won audiences over to dreaded contemporary scores like Messiaen 's `` Quartet for the End of Time . ''",3.812681545742699,1.0,0.0,1.0,0.0
+56,"Today , the pixie-like clarinetist has mostly dropped the missionary work -LRB- though a touch of the old Tashi still survives -RRB- and now goes on the road with piano , bass , a slide show , and a repertoire that ranges from light classical to light jazz to light pop , with a few notable exceptions .",3.4541330985316785,1.0,0.0,1.0,0.0
+57,"Just the thing for the Vivaldi-at-brunch set , the yuppie audience that has embraced New Age as its very own easy listening .",3.344456935241198,1.0,0.0,1.0,0.0
+58,But you ca n't dismiss Mr. Stoltzman 's music or his motives as merely commercial and lightweight .,3.419381945646371,1.0,0.0,1.0,0.0
+59,"He believes in what he plays , and he plays superbly .",2.792481250360578,1.0,0.0,1.0,0.0
+60,"His recent appearance at the Metropolitan Museum , dubbed `` A Musical Odyssey , '' was a case in point .",3.4039894464852614,1.0,0.0,1.0,0.0
+61,"It felt more like a party , or a highly polished jam session with a few friends , than a classical concert .",3.327484781955842,1.0,0.0,1.0,0.0
+62,"Clad in his trademark black velvet suit , the soft-spoken clarinetist announced that his new album , `` Inner Voices , '' had just been released , that his family was in the front row , and that it was his mother 's birthday , so he was going to play her favorite tune from the record .",3.7480189874561063,1.0,0.0,1.0,0.0
+63,"He launched into Saint-Saens 's `` The Swan '' from `` Carnival of the Animals , '' a favorite encore piece for cellists , with lovely , glossy tone and no bite .",3.5101762259314633,1.0,0.0,1.0,0.0
+64,"Then , as if to show that he could play fast as well , he offered the second movement from Saint-Saens 's Sonata for Clarinet , a whimsical , puckish tidbit that reflected the flip side of the Stoltzman personality .",3.6034996397182395,1.0,0.0,1.0,0.0
+65,"And so it went through the first half : an ingeniously chosen potpourri of pieces , none longer than five minutes , none that would disturb or challenge a listener .",3.9503441981686893,1.0,0.0,1.0,0.0
+66,"Mr. Stoltzman introduced his colleagues : Bill Douglas , pianist/bassoonist/composer and an old buddy from Yale , and jazz bassist Eddie Gomez .",3.1474104580394817,1.0,0.0,1.0,0.0
+67,"An improvisational section was built around pieces by Mr. Douglas , beginning with `` Golden Rain , '' a lilting , laid-back lead in to the uptempo `` Sky , '' which gave Mr. Stoltzman the opportunity to wail in a high register and show off his fleet fingers .",3.833411192621122,1.0,0.0,1.0,0.0
+68,Bach 's `` Air '' followed .,2.807354922057604,1.0,0.0,1.0,0.0
+69,"Mr. Stoltzman tied the composer in by proclaiming him `` the great improviser of the 18th century , '' and then built on the image by joining with Mr. Douglas in some Bach two-part inventions , cleverly arranged for clarinet and bassoon by Mr. Douglas .",3.6643057074628724,1.0,0.0,1.0,0.0
+70,"Keeping the mood light , the two then chanted and chortled their way through some murderous polyrhythms , devised by Mr. Douglas as an alternative to Hindemith 's dry theory-teaching techniques , and then , with Mr. Gomez , soared and improvised on the composer 's tight `` Bebop Etudes . ''",3.9459148454511466,1.0,0.0,1.0,0.0
+71,"The end of the first half , however , brought what the standing-room-only crowd seemed to be waiting for : the pop singer Judy Collins , who appears on `` Inner Voices . ''",3.9146892241642446,1.0,0.0,1.0,0.0
+72,"Glamorous and pure-voiced as ever , Ms. Collins sang Joni Mitchell 's `` For Free '' -- about an encounter with a street-corner clarinetist , to which Mr. Stoltzman contributed a clarinet obligatto -- and Mr. Douglas 's lush setting of a Gaelic blessing , `` Deep Peace . ''",3.693340441068115,1.0,0.0,1.0,0.0
+73,"`` Deep Peace '' also featured a slide show of lovely but predictable images of clouds , beaches , deserts , sunsets , etc .",3.399079570624174,1.0,0.0,1.0,0.0
+74,"It was all too mellow to be believed , but they probably would have gotten away with it , had they not felt compelled to add Ms. Collins 's signature tune , `` Amazing Grace , '' and ask for audience participation .",3.958371371475034,1.0,0.0,1.0,0.0
+75,That went over the permissible line for warm and fuzzy feelings .,3.0220552088742,1.0,0.0,1.0,0.0
+76,Was this why some of the audience departed before or during the second half ?,2.789898095464287,1.0,0.0,1.0,0.0
+77,Or was it because Ms. Collins had gone ?,2.725480556997868,1.0,0.0,1.0,0.0
+78,"Either way it was a pity , because Mr. Stolzman offered the most substantial music of the evening just after intermission : Steve Reich 's `` New York Counterpoint , '' one of a series of Reich works that juxtapose a live performer with recorded tracks of his or her own playing .",3.8535417955799107,1.0,0.0,1.0,0.0
+79,-LRB- Mr. Reich 's new `` Different Trains '' for string quartet uses the technique magisterially . -RRB-,3.6835423624332306,1.0,0.0,1.0,0.0
+80,Mr. Stoltzman must have worried that his audience might not be able to take it : He warned us in advance that `` New York Counterpoint '' lasts 11 1/2 minutes .,4.030639062229566,1.0,0.0,1.0,0.0
+81,"He also unfortunately illustrated this intricate , jazzy tapestry with Mr. Pearson 's images , this time of geometric or repeating objects , in a kitschy mirroring of the musical structure that was thoroughly distracting from Mr. Reich 's piece and Mr. Stoltzman 's elegant execution of it .",3.6464349058728724,1.0,0.0,1.0,0.0
+82,"The rest of the concert was more straight jazz and mellow sounds written by Charlie Parker , Ornette Coleman , Bill Douglas and Eddie Gomez , with pictures for the Douglas pieces .",3.2398827550664935,1.0,0.0,1.0,0.0
+83,"It was enjoyable to hear accomplished jazz without having to sit in a smoke-filled club , but like the first half , much of it was easy to take and ultimately forgettable .",3.4711775447859194,1.0,0.0,1.0,0.0
+84,Is this the future of chamber music ?,2.1556390622295662,1.0,0.0,1.0,0.0
+85,"Managers and presenters insist that chamber music concerts are a hard sell , but can audiences really enjoy them only if the music is purged of threatening elements , served up in bite-sized morsels and accompanied by visuals ?",3.707817925648647,1.0,0.0,1.0,0.0
+86,What 's next ?,2.0,1.0,0.0,1.0,0.0
+87,Slides to illustrate Shostakovich quartets ?,2.2516291673878226,1.0,0.0,1.0,0.0
+88,"It was not an unpleasant evening , certainly , thanks to the high level of performance , the compositional talents of Mr. Douglas , and the obvious sincerity with which Mr. Stoltzman chooses his selections .",3.7390979179887855,1.0,0.0,1.0,0.0
+89,But it was neither deep nor lasting : light entertainment that was no substitute for an evening of Brahms .,3.446439344671015,1.0,0.0,1.0,0.0
+90,Ms. Waleson is a free-lance writer based in New York .,2.7321588913645707,1.0,0.0,1.0,0.0
+91,One of Ronald Reagan 's attributes as President was that he rarely gave his blessing to the claptrap that passes for `` consensus '' in various international institutions .,3.9228287372391675,1.0,0.0,1.0,0.0
+92,"In fact , he liberated the U.S. from one of the world 's most corrupt organizations -- UNESCO .",3.6818808028034016,1.0,0.0,1.0,0.0
+93,"This is the U.N. group that managed to traduce its own charter of promoting education , science and culture .",3.6414460711655217,1.0,0.0,1.0,0.0
+94,"Ever since , the remaining members have been desperate for the United States to rejoin this dreadful group .",3.7871439606981383,1.0,0.0,1.0,0.0
+95,Now UNESCO apologists are lobbying President Bush to renege on President Reagan 's decision to depart .,3.1692486956952335,1.0,0.0,1.0,0.0
+96,But we can think of many reasons to stay out for the foreseeable future and well beyond .,3.4613201402110083,1.0,0.0,1.0,0.0
+97,"The U.S. , along with Britain and Singapore , left the agency when its anti-Western ideology , financial corruption and top leadership got out of hand .",3.278061465832831,1.0,0.0,1.0,0.0
+98,"The personal antics of agency Director Amadou-Mahtar M'Bow drew much attention , such as when several of his top aides were uncovered as KGB plants and ejected from France and when a mysterious office fire was set just before Congress sent accountants to trace U.S. funds .",3.6602151827487566,1.0,0.0,1.0,0.0
+99,"Mr. M'Bow was an extreme case , but even his replacement , the more personally genial Spanish biochemist Federico Mayor , has had little success at achieving reforms .",3.7285021157426255,1.0,0.0,1.0,0.0

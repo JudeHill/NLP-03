@@ -1,4 +1,5 @@
 import numpy as np
+import warnings
 from munkres import Munkres, print_matrix
 from collections import Counter
 from sklearn.metrics.cluster import (
@@ -140,10 +141,17 @@ def calculate_variation_of_information(U, V):
     entropy_V = calculate_entropy(V)
     mutual_information = calculate_mutual_information(U, V)
     variation_of_information = entropy_U + entropy_V - 2 * mutual_information
+    if (entropy_U + entropy_V == 0):
+        return variation_of_information, 0.0
     return variation_of_information, variation_of_information / (entropy_U + entropy_V)
 
 
 def calculate_v_measure(true_labels, predicted_labels):
+    warnings.filterwarnings(
+        "ignore",
+        message="The number of unique classes is greater than 50% of the number of samples.*",
+        category=UserWarning
+    )
     homo_score = homogeneity_score(true_labels, predicted_labels)
     comp_score = completeness_score(true_labels, predicted_labels)
     v_score = v_measure_score(true_labels, predicted_labels)

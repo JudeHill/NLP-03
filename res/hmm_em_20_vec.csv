@@ -1,0 +1,183 @@
+id,sentence,VI,normalized-VI,homogeneity,completeness,V-score
+0,-,3.458695578948333,1.0,0.0,1.0,0.0
+1,"In an Oct. 19 review of `` The Misanthrope '' at Chicago 's Goodman Theatre -LRB- `` Revitalized Classics Take the Stage in Windy City , '' Leisure & Arts -RRB- , the role of Celimene , played by Kim Cattrall , was mistakenly attributed to Christina Haag .",2.9328636294452695,1.0,0.0,1.0,0.0
+2,Ms. Haag plays Elianti .,1.3709505944546687,1.0,0.0,1.0,0.0
+3,"Rolls-Royce Motor Cars Inc. said it expects its U.S. sales to remain steady at about 1,200 cars in 1990 .",2.9659573209491747,1.0,0.0,1.0,0.0
+4,"The luxury auto maker last year sold 1,214 cars in the U.S.",2.4508257945180882,1.0,0.0,1.0,0.0
+5,"Howard Mosher , president and chief executive officer , said he anticipates growth for the luxury auto maker in Britain and Europe , and in Far Eastern markets .",2.917820219041696,1.0,0.0,1.0,0.0
+6,BELL INDUSTRIES Inc. increased its quarterly to 10 cents from seven cents a share .,2.789898095464287,1.0,0.0,1.0,0.0
+7,The new rate will be payable Feb. 15 .,2.94770277922009,1.0,0.0,1.0,0.0
+8,A record date has n't been set .,2.5,1.0,0.0,1.0,0.0
+9,"Bell , based in Los Angeles , makes and distributes electronic , computer and building products .",2.6601297526332566,1.0,0.0,1.0,0.0
+10,Investors are appealing to the Securities and Exchange Commission not to limit their access to information about stock purchases and sales by corporate insiders .,3.187601311512056,1.0,0.0,1.0,0.0
+11,"A SEC proposal to ease reporting requirements for some company executives would undermine the usefulness of information on insider trades as a stock-picking tool , individual investors and professional money managers contend .",2.7530155938990255,1.0,0.0,1.0,0.0
+12,"They make the argument in letters to the agency about rule changes proposed this past summer that , among other things , would exempt many middle-management executives from reporting trades in their own companies ' shares .",2.920725303788384,1.0,0.0,1.0,0.0
+13,The proposed changes also would allow executives to report exercises of options later and less often .,2.8665871058289594,1.0,0.0,1.0,0.0
+14,Many of the letters maintain that investor confidence has been so shaken by the 1987 stock market crash -- and the markets already so stacked against the little guy -- that any decrease in information on insider-trading patterns might prompt individuals to get out of stocks altogether .,3.144307493621765,1.0,0.0,1.0,0.0
+15,"`` The SEC has historically paid obeisance to the ideal of a level playing field , '' wrote Clyde S. McGregor of Winnetka , Ill. , in one of the 92 letters the agency has received since the changes were proposed Aug. 17 .",3.1993876550867504,1.0,0.0,1.0,0.0
+16,`` Apparently the commission did not really believe in this ideal . '',2.873140679513133,1.0,0.0,1.0,0.0
+17,"Currently , the rules force executives , directors and other corporate insiders to report purchases and sales of their companies ' shares within about a month after the transaction .",2.9492553971685,1.0,0.0,1.0,0.0
+18,"But about 25 % of the insiders , according to SEC figures , file their reports late .",3.266332639970623,1.0,0.0,1.0,0.0
+19,"The changes were proposed in an effort to streamline federal bureaucracy and boost compliance by the executives `` who are really calling the shots , '' said Brian Lane , special counsel at the SEC 's office of disclosure policy , which proposed the changes .",3.2336062969232184,1.0,0.0,1.0,0.0
+20,"Investors , money managers and corporate officials had until today to comment on the proposals , and the issue has produced more mail than almost any other issue in memory , Mr. Lane said .",3.1084528468535213,1.0,0.0,1.0,0.0
+21,"The SEC will probably vote on the proposal early next year , he said .",3.240223928941852,1.0,0.0,1.0,0.0
+22,Not all those who wrote oppose the changes .,2.4193819456463714,1.0,0.0,1.0,0.0
+23,"The Committee on Federal Regulation of Securities for the American Bar Association argues , for example , in its lengthy letter to the SEC , that the proposed changes `` would substantially improve the -LCB- law -RCB- by conforming it more closely to contemporary business realities . ''",3.219841929151772,1.0,0.0,1.0,0.0
+24,What the investors who oppose the proposed changes object to most is the effect they say the proposal would have on their ability to spot telltale `` clusters '' of trading activity -- buying or selling by more than one officer or director within a short period of time .,3.1044468738904603,1.0,0.0,1.0,0.0
+25,"According to some estimates , the rule changes would cut insider filings by more than a third .",2.557727778739319,1.0,0.0,1.0,0.0
+26,The SEC 's Mr. Lane vehemently disputed those estimates .,2.6464393446710153,1.0,0.0,1.0,0.0
+27,"The rules will eliminate filings policy-making divisions , such as sales , marketing , finance and research and development , Mr. Lane said .",2.736440501696144,1.0,0.0,1.0,0.0
+28,"The proposed rules also would be tougher on the insiders still required to file reports , he said .",3.155565013329718,1.0,0.0,1.0,0.0
+29,Companies would be compelled to publish in annual proxy statements the names of insiders who fail to file reports on time .,2.804596529702447,1.0,0.0,1.0,0.0
+30,"Considered as a whole , Mr. Lane said , the filings required under the proposed rules `` will be at least as effective , if not more so , for investors following transactions . ''",3.1324168623183737,1.0,0.0,1.0,0.0
+31,"But Robert Gabele , president of Invest/Net , a North Miami , Fla. , company that packages and sells the insider-trading data , said the proposal is worded so vaguely that key officials may fail to file the reports .",3.317407858202761,1.0,0.0,1.0,0.0
+32,"Many investors wrote asking the SEC to require insiders to report their purchases and sales immediately , not a month later .",3.0792258015191027,1.0,0.0,1.0,0.0
+33,"But Mr. Lane said that while the SEC regulates who files , the law tells them when to do so .",3.136863709607318,1.0,0.0,1.0,0.0
+34,"Investors who want to change the required timing should write their representatives in Congress , he added .",3.086048612313038,1.0,0.0,1.0,0.0
+35,"The SEC would likely be amenable to legislation that required insiders to file transactions on a more timely basis , he said .",3.3061706517091873,1.0,0.0,1.0,0.0
+36,"The nation 's largest pension fund , which oversees $ 80 billion for college employees , plans to offer two new investment options to its 1.2 million participants .",3.026277013101236,1.0,0.0,1.0,0.0
+37,"The Teachers Insurance and Annuity Association-College Retirement Equities Fund said it will introduce a stock and bond fund that will invest in `` socially responsible '' companies , and a bond fund .",3.1830025446548,1.0,0.0,1.0,0.0
+38,"Both funds are expected to begin operation around March 1 , subject to Securities and Exchange Commission approval .",3.260828171224455,1.0,0.0,1.0,0.0
+39,"For its employees to sign up for the options , a college also must approve the plan .",3.127986806877675,1.0,0.0,1.0,0.0
+40,"Some 4,300 institutions are part of the pension fund .",2.321928094887362,1.0,0.0,1.0,0.0
+41,"The new options carry out part of an agreement that the pension fund , under pressure to relax its strict participation rules and to provide more investment options , reached with the SEC in December .",2.996624141510993,1.0,0.0,1.0,0.0
+42,"The new `` social choice '' fund will shun securities of companies linked to South Africa , nuclear power and in some cases , Northern Ireland .",2.9538063731601096,1.0,0.0,1.0,0.0
+43,"Also excluded will be investments in companies with `` significant '' business stemming from weapons manufacture , alcoholic beverages or tobacco .",2.7136874387933565,1.0,0.0,1.0,0.0
+44,"Sixty percent of the fund will be invested in stocks , with the rest going into bonds or short-term investments .",3.0463811129458835,1.0,0.0,1.0,0.0
+45,"The bond fund will invest in high-grade or medium-grade bonds , mortgages or asset-backed securities , including as much as 15 % in foreign securities .",3.1377785457145273,1.0,0.0,1.0,0.0
+46,"The fund also might buy and sell futures and options contracts , subject to approval by the New York State Insurance Department .",3.079245393062508,1.0,0.0,1.0,0.0
+47,"Under two new features , participants will be able to transfer money from the new funds to other investment funds or , if their jobs are terminated , receive cash from the funds .",3.1895415173391393,1.0,0.0,1.0,0.0
+48,"The investment choices offered by the pension fund currently are limited to a stock fund , an annuity and a money-market fund .",2.5175199783432034,1.0,0.0,1.0,0.0
+49,"New Brunswick Scientific Co. , a maker of biotechnology instrumentation and equipment , said it adopted an anti-takeover plan giving shareholders the right to purchase shares at half price under certain conditions .",2.976550757009136,1.0,0.0,1.0,0.0
+50,"The company said the plan , under review for some time , will protect shareholders against `` abusive takeover tactics .",2.527495543791609,1.0,0.0,1.0,0.0
+51,"W. Ed Tyler , 37 years old , a senior vice president at this printing concern , was elected president of its technology group , a new position .",3.0002464095783576,1.0,0.0,1.0,0.0
+52,"Solo woodwind players have to be creative if they want to work a lot , because their repertoire and audience appeal are limited .",2.923533209849189,1.0,0.0,1.0,0.0
+53,"The oboist Heinz Holliger has taken a hard line about the problem : He commissions and splendidly interprets fearsome contemporary scores and does some conducting , so he does n't have to play the same Mozart and Strauss concertos over and over again .",3.518884391699703,1.0,0.0,1.0,0.0
+54,"Richard Stoltzman has taken a gentler , more audience-friendly approach .",2.9139770731827523,1.0,0.0,1.0,0.0
+55,"Years ago , he collaborated with the new music gurus Peter Serkin and Fred Sherry in the very countercultural chamber group Tashi , which won audiences over to dreaded contemporary scores like Messiaen 's `` Quartet for the End of Time . ''",3.1298678155345616,1.0,0.0,1.0,0.0
+56,"Today , the pixie-like clarinetist has mostly dropped the missionary work -LRB- though a touch of the old Tashi still survives -RRB- and now goes on the road with piano , bass , a slide show , and a repertoire that ranges from light classical to light jazz to light pop , with a few notable exceptions .",3.115887662276164,1.0,0.0,1.0,0.0
+57,"Just the thing for the Vivaldi-at-brunch set , the yuppie audience that has embraced New Age as its very own easy listening .",3.170543891762937,1.0,0.0,1.0,0.0
+58,But you ca n't dismiss Mr. Stoltzman 's music or his motives as merely commercial and lightweight .,3.239097917988786,1.0,0.0,1.0,0.0
+59,"He believes in what he plays , and he plays superbly .",2.355388542207534,1.0,0.0,1.0,0.0
+60,"His recent appearance at the Metropolitan Museum , dubbed `` A Musical Odyssey , '' was a case in point .",2.851149423893033,1.0,0.0,1.0,0.0
+61,"It felt more like a party , or a highly polished jam session with a few friends , than a classical concert .",2.9638096525384383,1.0,0.0,1.0,0.0
+62,"Clad in his trademark black velvet suit , the soft-spoken clarinetist announced that his new album , `` Inner Voices , '' had just been released , that his family was in the front row , and that it was his mother 's birthday , so he was going to play her favorite tune from the record .",3.2619947754601215,1.0,0.0,1.0,0.0
+63,"He launched into Saint-Saens 's `` The Swan '' from `` Carnival of the Animals , '' a favorite encore piece for cellists , with lovely , glossy tone and no bite .",2.8515296352190513,1.0,0.0,1.0,0.0
+64,"Then , as if to show that he could play fast as well , he offered the second movement from Saint-Saens 's Sonata for Clarinet , a whimsical , puckish tidbit that reflected the flip side of the Stoltzman personality .",3.470135468392373,1.0,0.0,1.0,0.0
+65,"And so it went through the first half : an ingeniously chosen potpourri of pieces , none longer than five minutes , none that would disturb or challenge a listener .",3.2393169730084828,1.0,0.0,1.0,0.0
+66,"Mr. Stoltzman introduced his colleagues : Bill Douglas , pianist/bassoonist/composer and an old buddy from Yale , and jazz bassist Eddie Gomez .",2.7296000026291853,1.0,0.0,1.0,0.0
+67,"An improvisational section was built around pieces by Mr. Douglas , beginning with `` Golden Rain , '' a lilting , laid-back lead in to the uptempo `` Sky , '' which gave Mr. Stoltzman the opportunity to wail in a high register and show off his fleet fingers .",3.1244310015906263,1.0,0.0,1.0,0.0
+68,Bach 's `` Air '' followed .,2.1280852788913944,1.0,0.0,1.0,0.0
+69,"Mr. Stoltzman tied the composer in by proclaiming him `` the great improviser of the 18th century , '' and then built on the image by joining with Mr. Douglas in some Bach two-part inventions , cleverly arranged for clarinet and bassoon by Mr. Douglas .",3.2509910367378043,1.0,0.0,1.0,0.0
+70,"Keeping the mood light , the two then chanted and chortled their way through some murderous polyrhythms , devised by Mr. Douglas as an alternative to Hindemith 's dry theory-teaching techniques , and then , with Mr. Gomez , soared and improvised on the composer 's tight `` Bebop Etudes . ''",3.341073431716849,1.0,0.0,1.0,0.0
+71,"The end of the first half , however , brought what the standing-room-only crowd seemed to be waiting for : the pop singer Judy Collins , who appears on `` Inner Voices . ''",3.1853735923368958,1.0,0.0,1.0,0.0
+72,"Glamorous and pure-voiced as ever , Ms. Collins sang Joni Mitchell 's `` For Free '' -- about an encounter with a street-corner clarinetist , to which Mr. Stoltzman contributed a clarinet obligatto -- and Mr. Douglas 's lush setting of a Gaelic blessing , `` Deep Peace . ''",3.16604988153611,1.0,0.0,1.0,0.0
+73,"`` Deep Peace '' also featured a slide show of lovely but predictable images of clouds , beaches , deserts , sunsets , etc .",2.6276013115120564,1.0,0.0,1.0,0.0
+74,"It was all too mellow to be believed , but they probably would have gotten away with it , had they not felt compelled to add Ms. Collins 's signature tune , `` Amazing Grace , '' and ask for audience participation .",3.3234186061539535,1.0,0.0,1.0,0.0
+75,That went over the permissible line for warm and fuzzy feelings .,2.8553885422075336,1.0,0.0,1.0,0.0
+76,Was this why some of the audience departed before or during the second half ?,3.006238928653389,1.0,0.0,1.0,0.0
+77,Or was it because Ms. Collins had gone ?,2.725480556997868,1.0,0.0,1.0,0.0
+78,"Either way it was a pity , because Mr. Stolzman offered the most substantial music of the evening just after intermission : Steve Reich 's `` New York Counterpoint , '' one of a series of Reich works that juxtapose a live performer with recorded tracks of his or her own playing .",3.331893194665882,1.0,0.0,1.0,0.0
+79,-LRB- Mr. Reich 's new `` Different Trains '' for string quartet uses the technique magisterially . -RRB-,2.858278308418045,1.0,0.0,1.0,0.0
+80,Mr. Stoltzman must have worried that his audience might not be able to take it : He warned us in advance that `` New York Counterpoint '' lasts 11 1/2 minutes .,3.3011085007312415,1.0,0.0,1.0,0.0
+81,"He also unfortunately illustrated this intricate , jazzy tapestry with Mr. Pearson 's images , this time of geometric or repeating objects , in a kitschy mirroring of the musical structure that was thoroughly distracting from Mr. Reich 's piece and Mr. Stoltzman 's elegant execution of it .",3.3915323549407694,1.0,0.0,1.0,0.0
+82,"The rest of the concert was more straight jazz and mellow sounds written by Charlie Parker , Ornette Coleman , Bill Douglas and Eddie Gomez , with pictures for the Douglas pieces .",2.815640330824069,1.0,0.0,1.0,0.0
+83,"It was enjoyable to hear accomplished jazz without having to sit in a smoke-filled club , but like the first half , much of it was easy to take and ultimately forgettable .",3.220733226407422,1.0,0.0,1.0,0.0
+84,Is this the future of chamber music ?,2.4056390622295662,1.0,0.0,1.0,0.0
+85,"Managers and presenters insist that chamber music concerts are a hard sell , but can audiences really enjoy them only if the music is purged of threatening elements , served up in bite-sized morsels and accompanied by visuals ?",3.135961569738464,1.0,0.0,1.0,0.0
+86,What 's next ?,2.0,1.0,0.0,1.0,0.0
+87,Slides to illustrate Shostakovich quartets ?,2.2516291673878226,1.0,0.0,1.0,0.0
+88,"It was not an unpleasant evening , certainly , thanks to the high level of performance , the compositional talents of Mr. Douglas , and the obvious sincerity with which Mr. Stoltzman chooses his selections .",3.2250357672477703,1.0,0.0,1.0,0.0
+89,But it was neither deep nor lasting : light entertainment that was no substitute for an evening of Brahms .,3.246439344671015,1.0,0.0,1.0,0.0
+90,Ms. Waleson is a free-lance writer based in New York .,2.5503407095463886,1.0,0.0,1.0,0.0
+91,One of Ronald Reagan 's attributes as President was that he rarely gave his blessing to the claptrap that passes for `` consensus '' in various international institutions .,3.332504065557658,1.0,0.0,1.0,0.0
+92,"In fact , he liberated the U.S. from one of the world 's most corrupt organizations -- UNESCO .",3.181366328891458,1.0,0.0,1.0,0.0
+93,"This is the U.N. group that managed to traduce its own charter of promoting education , science and culture .",3.003701696057348,1.0,0.0,1.0,0.0
+94,"Ever since , the remaining members have been desperate for the United States to rejoin this dreadful group .",3.3263604079526936,1.0,0.0,1.0,0.0
+95,Now UNESCO apologists are lobbying President Bush to renege on President Reagan 's decision to depart .,2.727497224852472,1.0,0.0,1.0,0.0
+96,But we can think of many reasons to stay out for the foreseeable future and well beyond .,3.350209029099897,1.0,0.0,1.0,0.0
+97,"The U.S. , along with Britain and Singapore , left the agency when its anti-Western ideology , financial corruption and top leadership got out of hand .",3.1578721140611075,1.0,0.0,1.0,0.0
+98,"The personal antics of agency Director Amadou-Mahtar M'Bow drew much attention , such as when several of his top aides were uncovered as KGB plants and ejected from France and when a mysterious office fire was set just before Congress sent accountants to trace U.S. funds .",3.385328277673352,1.0,0.0,1.0,0.0
+99,"Mr. M'Bow was an extreme case , but even his replacement , the more personally genial Spanish biochemist Federico Mayor , has had little success at achieving reforms .",3.233173564825374,1.0,0.0,1.0,0.0
+100,"Several ridiculous projects continue , including the `` New International Economic Order , '' which means redistributionism from the West to pay for everyone else 's statism .",3.120952031026403,1.0,0.0,1.0,0.0
+101,"The Orwellian `` New World Information Order '' would give government officials rights against the press ; journalists would be obliged to kowtow to their government , which would have licensing and censorship powers and , indeed , duties to block printing of `` wrong '' ideas .",3.053770585643888,1.0,0.0,1.0,0.0
+102,UNESCO somehow converted the founding U.N. ideals of individual rights and liberty into `` peoples ' rights . '',3.070847093622518,1.0,0.0,1.0,0.0
+103,Million-dollar conferences were held to chew on subjects such as `` ethical responsibilities of scientists in support of disarmament '' and `` the impact of the activities of transnational corporations . '',2.7565484393180983,1.0,0.0,1.0,0.0
+104,The agency was so totally subverted from the high principles of its founding that even the Soviets now wonder about an agency that seemed so congenial to them .,3.233173564825374,1.0,0.0,1.0,0.0
+105,"Glasnost may be partly responsible , but Soviet Foreign Minister Eduard Shevardnadze last year admitted , `` The exaggerated ideological approach undermined tolerance intrinsic to UNESCO . ''",3.084539530717336,1.0,0.0,1.0,0.0
+106,UNESCO is now holding its biennial meetings in Paris to devise its next projects .,3.2402239289418517,1.0,0.0,1.0,0.0
+107,Mr. Mayor 's hope that references to `` press freedom '' would survive unamended seems doomed to failure ; the current phrasing is `` educating the public and media to avoid manipulation . '',3.0419076935552014,1.0,0.0,1.0,0.0
+108,He has n't been able to replace the M'Bow cabal .,3.095795255000934,1.0,0.0,1.0,0.0
+109,"Soviets remain in charge of education programs , a former head of an African military tribunal for executions is in charge of culture , and a hard-line Polish communist in exile directs the human-rights and peace division .",2.6771226589248758,1.0,0.0,1.0,0.0
+110,"Of the agency 's 2,750 staff members , 230 are in the field working on actual projects , such as literacy and oceanographic research .",2.917405811425518,1.0,0.0,1.0,0.0
+111,"The position of the United States , which once contributed 25 % of the budget , is that nothing has changed .",3.4474015047059146,1.0,0.0,1.0,0.0
+112,"John Bolton , the assistant secretary of state for international organizations , told Congress that the continuing `` statist , restrictive , nondemocratic '' programs make rejoining any time soon `` extremely unlikely . ''",2.924754002771495,1.0,0.0,1.0,0.0
+113,"This has n't much bothered the UNESCO delegates , who last week could n't even agree to raise funds by selling off a fancy 19th-century French chateau the agency somehow owns .",3.391126767019874,1.0,0.0,1.0,0.0
+114,"Other countries , including West Germany , may have a hard time justifying continued membership .",2.686278124459133,1.0,0.0,1.0,0.0
+115,We see an even stronger argument against UNESCO than its unsurprising failure to reform .,3.006238928653389,1.0,0.0,1.0,0.0
+116,This is that the Reagan Revolution spanning Eastern Europe and Tiananmen Square shows the power of ideas unencumbered by international civil servants or government functionaries .,3.0608554687914507,1.0,0.0,1.0,0.0
+117,"Free markets , free minds and free elections have an appeal that seems to get muddled only when delivered through U.N. organizations -- which of course are made up largely of governments that fear these principles at home .",3.268266565005878,1.0,0.0,1.0,0.0
+118,The Babelists of the United Nations are experts at obfuscation .,2.481714572986073,1.0,0.0,1.0,0.0
+119,"This can have its purposes at times , but there 's no reason to cloud the importance and allure of Western concepts of freedom and justice .",3.01342268702814,1.0,0.0,1.0,0.0
+120,"We can see plenty of reasons to stay out , and none to rejoin UNESCO .",3.202819531114783,1.0,0.0,1.0,0.0
+121,Researchers at Plant Genetic Systems N.V. in Belgium said they have developed a genetic engineering technique for creating hybrid plants for a number of key crops .,3.0278804472341845,1.0,0.0,1.0,0.0
+122,The researchers said they have isolated a plant gene that prevents the production of pollen .,2.5550365325772657,1.0,0.0,1.0,0.0
+123,The gene thus can prevent a plant from fertilizing itself .,2.9139770731827523,1.0,0.0,1.0,0.0
+124,"Such so-called male-sterile plants can then be fertilized by pollen from another strain of the plant , thereby producing hybrid seed .",2.8974076197009215,1.0,0.0,1.0,0.0
+125,"The new generation of plants will possess the flourishing , high-production trait known as `` hybrid vigor , '' similar to that now seen in hybrid corn .",2.897214084366032,1.0,0.0,1.0,0.0
+126,"`` The development could have a dramatic effect on farm production , especially cotton , '' said Murray Robinson , president of Delta & Pine Land Co. , a Southwide Inc. subsidiary that is one of the largest cotton seed producers in the U.S. .",3.0970837987106097,1.0,0.0,1.0,0.0
+127,"On a commercial scale , the sterilization of the pollen-producing male part has only been achieved in corn and sorghum feed grains .",2.907855023068745,1.0,0.0,1.0,0.0
+128,"That 's because the male part , the tassel , and the female , the ear , are some distance apart on the corn plant .",2.6573852766501784,1.0,0.0,1.0,0.0
+129,"In a labor-intensive process , the seed companies cut off the tassels of each plant , making it male sterile .",2.684017280829845,1.0,0.0,1.0,0.0
+130,"They sow a row of male-fertile plants nearby , which then pollinate the male-sterile plants .",2.952819531114783,1.0,0.0,1.0,0.0
+131,The first hybrid corn seeds produced using this mechanical approach were introduced in the 1930s and they yielded as much as 20 % more corn than naturally pollinated plants .,3.2322628970242686,1.0,0.0,1.0,0.0
+132,The vast majority of the U.S. corn crop now is grown from hybrid seeds produced by seed companies .,2.865576855207248,1.0,0.0,1.0,0.0
+133,"A similar technique is almost impossible to apply to other crops , such as cotton , soybeans and rice .",2.9037016960573485,1.0,0.0,1.0,0.0
+134,"The male part , the anthers of the plant , and the female , the pistils , of the same plant are within a fraction of an inch or even attached to each other .",2.7148974894015976,1.0,0.0,1.0,0.0
+135,The anthers in these plants are difficult to clip off .,2.7321588913645702,1.0,0.0,1.0,0.0
+136,"In China , a great number of workers are engaged in pulling out the male organs of rice plants using tweezers , and one-third of rice produced in that country is grown from hybrid seeds .",2.9270064352144214,1.0,0.0,1.0,0.0
+137,"At Plant Genetic Systems , researchers have isolated a pollen-inhibiting gene that can be inserted in a plant to confer male sterility .",3.207707064470474,1.0,0.0,1.0,0.0
+138,"Jan Leemans , research director , said this gene was successfully introduced in oil-producing rapeseed plants , a major crop in Europe and Canada , using as a carrier a `` promoter gene '' developed by Robert Goldberg at the University of California in Los Angeles .",2.94477575922875,1.0,0.0,1.0,0.0
+139,The sterilizing gene is expressed just before the pollen is about to develop and it deactivates the anthers of every flower in the plant .,3.0605038327557677,1.0,0.0,1.0,0.0
+140,Mr. Leemans said this genetic manipulation does n't hurt the growth of that plant .,3.006238928653389,1.0,0.0,1.0,0.0
+141,The researchers also pulled off a second genetic engineering trick in order to get male-sterile plants in large enough numbers to produce a commercial hybrid seed crop .,2.765881369960098,1.0,0.0,1.0,0.0
+142,"They attached a second gene , for herbicide resistance , to the pollen-inhibiting gene .",2.6565647621309543,1.0,0.0,1.0,0.0
+143,"Both genes are then inserted into a few greenhouse plants , which are then pollinated and allowed to mature and produce seed .",3.236186283255413,1.0,0.0,1.0,0.0
+144,The laws of heredity dictate that half of the plants springing from these greenhouse-produced seeds will be male sterile and herbicide resistant and half will be male fertile and herbicide susceptible .,2.8408255021937237,1.0,0.0,1.0,0.0
+145,"The application of herbicide would kill off the male-fertile plants , leaving a large field of male-sterile plants that can be cross-pollinated to produce hybrid seed .",2.952256596124317,1.0,0.0,1.0,0.0
+146,Mr. Leemans said the hybrid rapeseeds created with this genetic engineering yield 15 % to 30 % more output than the commercial strains used currently .,3.141619525334138,1.0,0.0,1.0,0.0
+147,"`` This technique is applicable to a wide variety of crops , '' he said , and added that some modifications may be necessary to accommodate the peculiarities of each type of crop .",3.1099542124304236,1.0,0.0,1.0,0.0
+148,"He said the company is experimenting with the technique on alfalfa , and plans to include cotton and corn , among other crops .",3.0424812503605785,1.0,0.0,1.0,0.0
+149,"He said that even though virtually all corn seeds currently planted are hybrids , the genetic approach will obviate the need for mechanical emasculation of anthers , which costs U.S. seed producers about $ 70 million annually .",3.395200460972321,1.0,0.0,1.0,0.0
+150,"In recent years , demand for hybrid seeds has spurred research at a number of chemical and biotechnology companies , including Monsanto Co. , Shell Oil Co. and Eli Lilly & Co .",2.763054346172263,1.0,0.0,1.0,0.0
+151,One technique developed by some of these companies involves a chemical spray supposed to kill only a plant 's pollen .,2.7013757559060485,1.0,0.0,1.0,0.0
+152,"But there have been problems with chemical sprays damaging plants ' female reproductive organs and concern for the toxicity of such chemical sprays to humans , animals and beneficial insects .",2.872605180935881,1.0,0.0,1.0,0.0
+153,"However , Paul Johanson , Monsanto 's director of plant sciences , said the company 's chemical spray overcomes these problems and is `` gentle on the female organ . ''",3.0259886487476058,1.0,0.0,1.0,0.0
+154,"Biosource Genetics Corp. , Vacaville , Calif. , is developing a spray containing a gene that spreads from cell to cell and interferes with the genes that are responsible for producing pollen .",3.1613951651942833,1.0,0.0,1.0,0.0
+155,"This gene , called `` gametocide , '' is carried into the plant by a virus that remains active for a few days .",2.8045851693377997,1.0,0.0,1.0,0.0
+156,"Robert Erwin , president of Biosource , called Plant Genetic 's approach `` interesting '' and `` novel , '' and `` complementary rather than competitive . ''",2.706322014082231,1.0,0.0,1.0,0.0
+157,"`` There is a large market out there hungry for hybrid seeds , '' he said .",2.8665871058289594,1.0,0.0,1.0,0.0
+158,"Mr. Robinson of Delta & Pine , the seed producer in Scott , Miss. , said Plant Genetic 's success in creating genetically engineered male steriles does n't automatically mean it would be simple to create hybrids in all crops .",3.3411853103971794,1.0,0.0,1.0,0.0
+159,"That 's because pollination , while easy in corn because the carrier is wind , is more complex and involves insects as carriers in crops such as cotton .",3.012816339805954,1.0,0.0,1.0,0.0
+160,"`` It 's one thing to say you can sterilize , and another to then successfully pollinate the plant , '' he said .",3.0860388152612774,1.0,0.0,1.0,0.0
+161,"Nevertheless , he said , he is negotiating with Plant Genetic to acquire the technology to try breeding hybrid cotton .",3.2321018048454135,1.0,0.0,1.0,0.0
+162,"A bitter conflict with global implications has erupted between Nomura Securities Co. and Industrial Bank of Japan , two of the world 's most powerful financial companies .",3.1820058147602133,1.0,0.0,1.0,0.0
+163,The clash is a sign of a new toughness and divisiveness in Japan 's once-cozy financial circles .,2.8855130303998817,1.0,0.0,1.0,0.0
+164,Not only are Japan 's financial institutions putting their enormous clout to work ; increasingly they 're squaring off against one another in unprecedented public fashion .,3.411751853774935,1.0,0.0,1.0,0.0
+165,"Already , the consequences are being felt by other players in the financial markets -- even governments .",2.8638263900908156,1.0,0.0,1.0,0.0
+166,What triggered the latest clash was a skirmish over the timing of a New Zealand government bond issue .,2.694781460584273,1.0,0.0,1.0,0.0
+167,"Nomura was attempting to organize the 50 billion-yen -LRB- $ 352 million -RRB- borrowing in Japan at a time when many Japanese banks , led by Industrial Bank of Japan , were pressuring the Wellington government to help them recover loans made to a defunct investment bank that had been owned by New Zealand 's civil-service pension fund .",3.462843795624412,1.0,0.0,1.0,0.0
+168,"Unwilling to put up new money for New Zealand until those debts are repaid , most banks refused even to play administrative roles in the new financing , forcing an embarrassed Nomura to postpone it this week .",3.312430802347936,1.0,0.0,1.0,0.0
+169,The dispute shows clearly the global power of Japan 's financial titans .,3.0269868333592873,1.0,0.0,1.0,0.0
+170,"Aside from Nomura 's injured pride , the biggest victim so far has been the New Zealand government .",3.1813663288914587,1.0,0.0,1.0,0.0
+171,"Barred by its budget law from making any new domestic bond issues , Wellington 's Debt Management Office had been casting abroad to raise the 3 billion New Zealand dollars -LRB- US$ 1.76 billion -RRB- to NZ$ 4 billion it needs to come up with by the end of its fiscal year next June 30 .",3.611041468834078,1.0,0.0,1.0,0.0
+172,"With Japan 's cash-flush banks aligned against it , though , raising money may be difficult .",3.2927701939369904,1.0,0.0,1.0,0.0
+173,"Not only can they block Wellington from raising money in Japan , bankers here say , but as the largest underwriters in the Eurobond market , they might be able to scuttle borrowings there , too .",3.450167313472171,1.0,0.0,1.0,0.0
+174,"New Zealand 's finance minister , David Caygill , lashed out at such suggestions .",2.7395722619867224,1.0,0.0,1.0,0.0
+175,"He told reporters in Wellington Tuesday that the government had n't guaranteed the loans to DFC New Zealand Ltd. , an investment bank 80%-owned by the National Provident Fund , and would n't bail it out .",3.2730009199061243,1.0,0.0,1.0,0.0
+176,"`` It may very well be what the Japanese banks want , '' he told Radio New Zealand .",2.9708400131019848,1.0,0.0,1.0,0.0
+177,`` I think it would be irresponsible and I am not about to be blackmailed by Japanese banks or any other international interests . '',3.223465189601647,1.0,0.0,1.0,0.0
+178,No less significant than the Japanese banks ' attempt to cut off funds to pressure a foreign government are the implications of a confrontation between Japan securities and banking industries .,2.9826022626848188,1.0,0.0,1.0,0.0
+179,Anxiety is rising over recent government proposals to eventually lower the strict barriers that now separate -- and protect -- the two industries from each other .,3.352135539906905,1.0,0.0,1.0,0.0
+180,"Both sides are jealously guarding their turf , and relations have been at a flashpoint for months .",2.969389419529156,1.0,0.0,1.0,0.0
+181,The banks badly want to break into all aspects of the securities business .,2.610577243331642,1.0,0.0,1.0,0.0

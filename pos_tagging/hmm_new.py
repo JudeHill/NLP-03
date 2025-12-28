@@ -36,7 +36,7 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         self.epsilon = 1e-12
         # Initialized to epsilon, so allowing unseen transition/emission to have p>0
         A = torch.rand(self.num_states + 1, self.num_states + 1, device=self.device)
-        A[:, 0] = 0.0
+        A[:, 0] = self.epsilon
         B = torch.rand(self.num_states, self.num_obs, device=self.device)
         self.transition_prob = A
         self.emission_prob = B
@@ -46,7 +46,7 @@ class HMMClassifier(BaseUnsupervisedClassifier):
 
     def reset(self):
         A = torch.rand(self.num_states + 1, self.num_states + 1, device=self.device)
-        A[:, 0] = 0.0
+        A[:, 0] = self.epsilon
         B = torch.rand(self.num_states, self.num_obs, device=self.device)
         self.transition_prob = A
         self.emission_prob = B
@@ -161,7 +161,7 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         num_iter: int = 5,
         initial_guesses=None,
         continue_training=False,
-        batch_size=64,
+        batch_size=256,
         pad_token_id=0,
     ):  
         """
@@ -218,17 +218,18 @@ class HMMClassifier(BaseUnsupervisedClassifier):
                     accumulate=True,
                 )
 
-            trans_counts = torch.zeros_like(self.transition_prob)
-            trans_counts[:, 0] = 0.0 
+            trans_counts = torch.full_like(self.transition_prob, self.epsilon)
+            trans_counts[:, 0] = self.epsilon
             trans_counts[0, 1:] += expected_initial
             trans_counts[1:, 1:] += expected_transitions
 
-            emis_counts = torch.zeros_like(self.emission_prob)
+            emis_counts = torch.full_like(self.emission_prob, self.epsilon)
             emis_counts += expected_emissions
 
-            self.transition_prob.copy_(trans_counts)
-            self.emission_prob.copy_(emis_counts)
-            self.logify()
+            self.transition_prob.copy_(torch.log(trans_counts))
+            self.emission_prob.copy_(torch.log(emis_counts))
+            self._log_normalize(self.transition_prob)
+            self._log_normalize(self.emission_prob)
 
 
 
@@ -397,7 +398,8 @@ class HMMClassifier(BaseUnsupervisedClassifier):
                 
                 trans_counts = torch.full_like(self.transition_prob, self.epsilon)
                 trans_counts[:, 0] = 0.0  
-                trans_counts[0, 1:] += expected_initial
+                # trans_counts[0, 1:] += expected_initial
+                trans_counts[0, 1:] += self.initial
                 trans_counts[1:, 1:] += expected_transitions
                 emis_counts = torch.full_like(self.emission_prob, self.epsilon)
                 emis_counts += expected_emissions
@@ -478,13 +480,13 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         mask_exp = mask.unsqueeze(-1)
 
         # 1. Safe LogSumExp: Replace -inf with -1e9 for stability
-        safe_log_unnorm = torch.where(mask_exp, log_unnorm_gamma, torch.tensor(-1e9, device=device))
+        safe_log_unnorm = torch.where(mask_exp, log_unnorm_gamma, torch.tensor(-1e-12, device=device))
         log_Z = torch.logsumexp(safe_log_unnorm, dim=2, keepdim=True)
 
         # 2. Detect "Impossible" tokens where log_Z is -inf (total prob approx 0)
         #    If log_Z is -inf, then log_unnorm_gamma is also -inf.
         #    Subtracting them gives NaN. We must force these to -inf (0 probability).
-        impossible_seq = log_Z < -1e8 
+        impossible_seq = log_Z < -1e11 
 
         log_gamma = log_unnorm_gamma - log_Z
         
@@ -518,11 +520,11 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         trans_mask = trans_mask.unsqueeze(-1).unsqueeze(-1)
 
         # 1. Safe LogSumExp
-        safe_log_unnorm_xi = torch.where(trans_mask, log_unnorm_xi, torch.tensor(-1e9, device=device))
+        safe_log_unnorm_xi = torch.where(trans_mask, log_unnorm_xi, torch.tensor(-1e12, device=device))
         log_Z_xi = torch.logsumexp(safe_log_unnorm_xi, dim=(2, 3), keepdim=True)
 
         # 2. Detect "Impossible" transitions
-        impossible_trans = log_Z_xi < -1e8
+        impossible_trans = log_Z_xi < -1e11
 
         log_xi = log_unnorm_xi - log_Z_xi
 

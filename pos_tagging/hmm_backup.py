@@ -29,9 +29,10 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         )
         print(f"Using device {self.device}")
         gpu_check.check()
+        self.cnt = 0
         self.num_states = num_states
         self.num_obs = num_obs
-        self.epsilon = 1e-12
+        self.epsilon = 1e-6
         # Initialized to epsilon, so allowing unseen transition/emission to have p>0
         A = torch.rand(self.num_states + 1, self.num_states + 1, device=self.device)
         A[:, 0] = 0.0
@@ -237,14 +238,18 @@ class HMMClassifier(BaseUnsupervisedClassifier):
 
             # M step (done after all inputs processed)
             # After computing expected_initial (counts) in linear space:
-            trans_counts = torch.zeros_like(self.transition_prob)
+            # M step
+            trans_counts = torch.full_like(self.transition_prob, self.epsilon)
             trans_counts[:, 0] = 0.0
-            trans_counts[0, 1:] += expected_initial  # shape (S,)
-            trans_counts[1:, 1:] += expected_transitions  # shape (S, S)  
-            self.transition_prob.copy_(trans_counts)
-            self.emission_prob.copy_(expected_emissions)
-            self.logify()
+            trans_counts[0, 1:] += expected_initial
+            trans_counts[1:, 1:] += expected_transitions
 
+            emis_counts = torch.full_like(self.emission_prob, self.epsilon)
+            emis_counts += expected_emissions
+
+            self.transition_prob.copy_(trans_counts)
+            self.emission_prob.copy_(emis_counts)  # ← FIX: use emis_counts, not expected_emissions
+            self.logify()
 
     def train_EM_hard_log(
         self,
@@ -284,132 +289,149 @@ class HMMClassifier(BaseUnsupervisedClassifier):
 
             self.emission_prob, self.transition_prob = emis_counts, trans_counts
             self.logify()
+def train_sEM(
+    self,
+    inputs: Dataset,
+    num_iter: int = 30,
+    eta_fn: Callable[[int], float] = lambda k: 0.8,
+    initial_guesses=None,
+    continue_training=False,
+):
+    """
+    Train an HMM with a stepwise online EM algorithm (in log-space).
 
-    def train_sEM(
-        self,
-        inputs: Dataset,
-        num_iter: int = 30,
-        eta_fn: Callable[[int], float] = lambda k: 0.8,
-        initial_guesses=None,
-        continue_training=False,
-    ):
-        """
-        Train an HMM with a stepwise online EM algorithm (in log-space).
+    Parameters are stored in log-space in self.transition_prob (shape (S+1,S+1))
+    and self.emission_prob (shape (S,V)).
 
-        Parameters are stored in log-space in self.transition_prob (shape (S+1,S+1))
-        and self.emission_prob (shape (S,V)).
+    For each sentence, we:
+    1) run forward–backward in log-space using current parameters
+    2) compute expected sufficient statistics (gamma, xi) for THIS sentence
+    3) build new parameter estimates from THIS sentence
+    4) interpolate current parameters with new estimates using step size eta_fn(k)
+    """
 
-        For each sentence, we:
-        1) run forward–backward in log-space using current parameters
-        2) compute expected sufficient statistics (gamma, xi)
-        3) update running expectations with a step size eta_fn(k)
-        4) rebuild full count matrices from expectations and call `logify()`
-        """
+    S = self.num_states
+    V = self.num_obs
 
-        S = self.num_states
-        V = self.num_obs
-
-        # ----- Initialization of parameters -----
-        if not continue_training:
-            if initial_guesses is None:
-                self.reset()  # also creates log-scale params via logify()
-            else:
-                A, B = initial_guesses
-                self.transition_prob = A.to(self.device)
-                self.emission_prob = B.to(self.device)
-                self.log_scale = True
-
-        if not self.log_scale:
-            self.logify()
+    # ----- Initialization of parameters -----
+    if not continue_training:
+        if initial_guesses is None:
+            self.reset()  # also creates log-scale params via logify()
+        else:
+            A, B = initial_guesses
+            self.transition_prob = A.to(self.device)
+            self.emission_prob = B.to(self.device)
             self.log_scale = True
 
-        # Global update counter for step-size schedule
-        # (you already have self.cnt; we’ll use that)
-        k = self.cnt
+    if not self.log_scale:
+        self.logify()
+        self.log_scale = True
 
-        for _ in range(num_iter):
-            # Running expectations for this epoch (in linear space)
-            expected_transitions = torch.zeros(S, S, device=self.device)
-            expected_state_counts = torch.zeros(S, device=self.device)
-            expected_emissions = torch.zeros(S, V, device=self.device)
-            expected_initial = torch.zeros(S, device=self.device)
+    # Global update counter for step-size schedule
+    k = 0
 
-            for eg in inputs:
-                k += 1
-                rate = eta_fn(k)
+    for _ in range(num_iter):
+        for eg in inputs:
+            k += 1
+            rate = eta_fn(k)
 
-                log_A = self.transition_prob        # (S+1, S+1), log-space
-                log_B = self.emission_prob          # (S, V),     log-space
+            log_A = self.transition_prob        # (S+1, S+1), log-space
+            log_B = self.emission_prob          # (S, V),     log-space
 
-                obs_list = eg["input_ids"]
-                n = len(obs_list)
-                obs = torch.tensor(obs_list, dtype=torch.long, device=self.device)
-                log_alpha = torch.full((n, S + 1), float('-inf'), device=self.device)
-                log_alpha[0, 1:] = log_A[0, 1:] + log_B[:, obs[0]]
+            obs_list = eg["input_ids"]
+            n = len(obs_list)
+            obs = torch.tensor(obs_list, dtype=torch.long, device=self.device)
+            
+            # ===== Forward pass =====
+            log_alpha = torch.full((n, S + 1), float('-inf'), device=self.device)
+            log_alpha[0, 1:] = log_A[0, 1:] + log_B[:, obs[0]]
 
-                for t in range(1, n):
-                    log_scores = log_alpha[t - 1].unsqueeze(1) + log_A  # (S+1, S+1)
-                    log_alpha[t, 1:] = torch.logsumexp(log_scores[:, 1:], dim=0) \
-                                    + log_B[:, obs[t]]
-                log_beta = torch.full((n, S + 1), float('-inf'), device=self.device)
-                log_beta[n - 1, 1:] = 0.0  
-                log_A_real = log_A[1:, 1:]  # (S, S)
+            for t in range(1, n):
+                log_scores = log_alpha[t - 1].unsqueeze(1) + log_A  # (S+1, S+1)
+                log_alpha[t, 1:] = torch.logsumexp(log_scores[:, 1:], dim=0) \
+                                + log_B[:, obs[t]]
+            
+            # ===== Backward pass =====
+            log_beta = torch.full((n, S + 1), float('-inf'), device=self.device)
+            log_beta[n - 1, 1:] = 0.0  
+            log_A_real = log_A[1:, 1:]  # (S, S)
 
-                for t in range(n - 2, -1, -1):
-                    log_emit_next = log_B[:, obs[t + 1]]           # (S,)
-                    log_future = log_emit_next + log_beta[t + 1, 1:]  # (S,)
-                    log_scores = log_A_real + log_future.unsqueeze(0)  # (S, S)
-                    log_beta[t, 1:] = torch.logsumexp(log_scores, dim=1)
+            for t in range(n - 2, -1, -1):
+                log_emit_next = log_B[:, obs[t + 1]]           # (S,)
+                log_future = log_emit_next + log_beta[t + 1, 1:]  # (S,)
+                log_scores = log_A_real + log_future.unsqueeze(0)  # (S, S)
+                log_beta[t, 1:] = torch.logsumexp(log_scores, dim=1)
 
-                log_unnorm_gamma = log_alpha[:, 1:] + log_beta[:, 1:]  # (n, S)
-                log_Z = torch.logsumexp(log_unnorm_gamma, dim=1, keepdim=True)
-                log_gamma = log_unnorm_gamma - log_Z
-                gamma = torch.exp(log_gamma)  # (n, S) in linear space
+            # ===== Compute gamma (state posteriors) =====
+            log_unnorm_gamma = log_alpha[:, 1:] + log_beta[:, 1:]  # (n, S)
+            log_Z = torch.logsumexp(log_unnorm_gamma, dim=1, keepdim=True)
+            log_gamma = log_unnorm_gamma - log_Z
+            gamma = torch.exp(log_gamma)  # (n, S) in linear space
 
-                log_alpha_real = log_alpha[:, 1:]  # (n, S)
-                log_beta_real = log_beta[:, 1:]    # (n, S)
+            # ===== Compute xi (transition posteriors) =====
+            log_alpha_real = log_alpha[:, 1:]  # (n, S)
+            log_beta_real = log_beta[:, 1:]    # (n, S)
 
-                log_alpha_t = log_alpha_real[:-1]  # (n-1, S)
-                log_beta_t1 = log_beta_real[1:]    # (n-1, S)
-                log_emit_next = log_B[:, obs[1:]].T  # (n-1, S)
+            log_alpha_t = log_alpha_real[:-1]  # (n-1, S)
+            log_beta_t1 = log_beta_real[1:]    # (n-1, S)
+            log_emit_next = log_B[:, obs[1:]].T  # (n-1, S)
 
-                log_unnorm_xi = (
-                    log_alpha_t.unsqueeze(2)       # (n-1, S, 1)
-                    + log_A_real.unsqueeze(0)      # (1, S, S)
-                    + log_emit_next.unsqueeze(1)   # (n-1, 1, S)
-                    + log_beta_t1.unsqueeze(1)     # (n-1, 1, S)
-                )  # -> (n-1, S, S)
+            log_unnorm_xi = (
+                log_alpha_t.unsqueeze(2)       # (n-1, S, 1)
+                + log_A_real.unsqueeze(0)      # (1, S, S)
+                + log_emit_next.unsqueeze(1)   # (n-1, 1, S)
+                + log_beta_t1.unsqueeze(1)     # (n-1, 1, S)
+            )  # -> (n-1, S, S)
 
-                log_Z_xi = torch.logsumexp(log_unnorm_xi, dim=(1, 2), keepdim=True)
-                log_xi = log_unnorm_xi - log_Z_xi
-                xi = torch.exp(log_xi)  # (n-1, S, S) in linear space
+            log_Z_xi = torch.logsumexp(log_unnorm_xi, dim=(1, 2), keepdim=True)
+            log_xi = log_unnorm_xi - log_Z_xi
+            xi = torch.exp(log_xi)  # (n-1, S, S) in linear space
 
-                ex_state_counts = gamma.sum(dim=0)      # (S,)
-                ex_transitions = xi.sum(dim=0)          # (S, S)
-                ex_initial = gamma[0]                   # (S,)
+            # ===== Extract expected counts for THIS sentence =====
+            ex_state_counts = gamma.sum(dim=0)      # (S,)
+            ex_transitions = xi.sum(dim=0)          # (S, S)
+            ex_initial = gamma[0]                   # (S,)
 
-                ex_emissions = torch.zeros(S, V, device=self.device)
-                ex_emissions.scatter_add_(
-                    1,  # dim
-                    obs.unsqueeze(0).expand(S, -1),
-                    gamma.T
-                )
+            ex_emissions = torch.zeros(S, V, device=self.device)
+            ex_emissions.scatter_add_(
+                1,  # dim
+                obs.unsqueeze(0).expand(S, -1),
+                gamma.T
+            )
 
-                expected_emissions = (1.0 - rate) * expected_emissions + rate * ex_emissions
-                expected_state_counts = (1.0 - rate) * expected_state_counts + rate * ex_state_counts
-                expected_initial = (1.0 - rate) * expected_initial + rate * ex_initial
-                expected_transitions = (1.0 - rate) * expected_transitions + rate * ex_transitions
-                
-                trans_counts = torch.full_like(self.transition_prob, self.epsilon)
-                trans_counts[:, 0] = 0.0  
-                trans_counts[0, 1:] += expected_initial
-                trans_counts[1:, 1:] += expected_transitions
-                emis_counts = torch.full_like(self.emission_prob, self.epsilon)
-                emis_counts += expected_emissions
-
-                self.transition_prob.copy_(trans_counts)
-                self.emission_prob.copy_(emis_counts)
-                self.logify()  
+            # ===== M-step: Build new parameters from THIS sentence =====
+            # Build transition counts
+            trans_counts = torch.full((S+1, S+1), self.epsilon, device=self.device)
+            trans_counts[:, 0] = 0.0
+            trans_counts[0, 1:] = ex_initial
+            trans_counts[1:, 1:] = ex_transitions
+            
+            # Build emission counts
+            emis_counts = torch.full((S, V), self.epsilon, device=self.device)
+            emis_counts += ex_emissions
+            
+            # Temporarily store these as the new parameters and convert to log space
+            new_transition_prob = trans_counts
+            new_emission_prob = emis_counts
+            
+            # Store current params
+            old_log_A = self.transition_prob
+            old_log_B = self.emission_prob
+            
+            # Convert new params to log space using logify
+            self.transition_prob = new_transition_prob
+            self.emission_prob = new_emission_prob
+            self.log_scale = False
+            self.logify()
+            
+            # Now interpolate in log space
+            new_log_A = self.transition_prob
+            new_log_B = self.emission_prob
+            
+            # ===== Online update: interpolate parameters =====
+            self.transition_prob = (1.0 - rate) * old_log_A + rate * new_log_A
+            self.emission_prob = (1.0 - rate) * old_log_B + rate * new_log_B
+            self.log_scale = True
 
 
 

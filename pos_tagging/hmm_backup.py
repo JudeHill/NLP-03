@@ -272,8 +272,9 @@ class HMMClassifier(BaseUnsupervisedClassifier):
             self.logify()
             self.log_scale = True
         for _ in range(num_iter):
-            emis_counts = torch.zeros(self.num_states, self.num_obs, device=self.device)
-            trans_counts = torch.zeros(self.num_states+1, self.num_states+1, device=self.device)
+            emis_counts = torch.full((self.num_states, self.num_obs), self.epsilon, device=self.device)
+            trans_counts = torch.full((self.num_states+1, self.num_states+1), self.epsilon, device=self.device)
+            trans_counts[:, 0] = 0.0
             for eg in inputs:
                 obs = eg["input_ids"]
                 obs = torch.tensor(obs, dtype=torch.long, device=self.device)
@@ -287,7 +288,8 @@ class HMMClassifier(BaseUnsupervisedClassifier):
                 for t in range(T - 1):
                     trans_counts[path[t] + 1, path[t+1] + 1] += 1
 
-            self.emission_prob, self.transition_prob = emis_counts, trans_counts
+            self.transition_prob = trans_counts
+            self.emission_prob = emis_counts
             self.logify()
     def train_sEM(
         self,

@@ -28,7 +28,7 @@ class HMMClassifier(BaseUnsupervisedClassifier):
             "cuda" if torch.cuda.is_available() else "cpu"
         )
         print(f"Using device {self.device}")
-        gpu_check.check()
+        # gpu_check.check()
         self.cnt = 0
         self.num_states = num_states
         self.num_obs = num_obs

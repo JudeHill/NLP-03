@@ -23,68 +23,91 @@ class KMeansPOSClusterer:
             tol: float = 1e-4,
             verbose: bool = False,
             init_centroids: Optional[torch.Tensor] = None,
-            batch_size: int = 50000, # Added for RAM safety
     ):
+        """
+        Lloyd's algorithm for k-means with optional warm start.
+
+        Args:
+            X: [N, D] data on any device/dtype (will be used as-is).
+            K: number of clusters.
+            num_iters: max Lloyd iterations.
+            tol: relative improvement tolerance on inertia for early stopping.
+            verbose: (currently unused; kept for compatibility).
+            init_centroids: optional [K, D] tensor. If provided, algorithm starts from these
+                centroids instead of random initialization (warm start).
+
+        Returns:
+            centroids: [K, D] tensor on self.device, same dtype as X
+            labels: [N] long tensor on self.device
+        """
         N, D = X.shape
+        if K <= 0:
+            raise ValueError(f"K must be positive, got {K}")
+        if K > N:
+            raise ValueError(f"K={K} cannot be larger than number of points N={N}")
+
+        # Ensure X is on the clusterer's device
         if X.device != self.device:
             X = X.to(self.device)
+        # NOTE: we keep X.dtype as provided; callers typically pass float32.
 
-        # 1. Initialize Centroids (Same as before)
+        # Initialize centroids
         if init_centroids is None:
             indices = torch.randperm(N, device=self.device)[:K]
             centroids = X[indices]
         else:
+            if not isinstance(init_centroids, torch.Tensor):
+                init_centroids = torch.tensor(init_centroids)
+            if init_centroids.ndim != 2:
+                raise ValueError(
+                    f"init_centroids must have shape [K, D], got {tuple(init_centroids.shape)}"
+                )
+            if init_centroids.shape[0] != K:
+                raise ValueError(
+                    f"init_centroids first dim must be K={K}, got {init_centroids.shape[0]}"
+                )
+            if init_centroids.shape[1] != D:
+                raise ValueError(
+                    f"init_centroids second dim must be D={D}, got {init_centroids.shape[1]}"
+                )
             centroids = init_centroids.to(self.device, dtype=X.dtype)
 
         prev_inertia = None
-        labels = torch.zeros(N, device=self.device, dtype=torch.long)
+        labels = None  # set inside loop
 
-        for iter_idx in range(num_iters):
-            inertia = 0.0
-            
-            # 2. BATCHED ASSIGNMENT (The RAM Fix)
-            for i in range(0, N, batch_size):
-                end = min(i + batch_size, N)
-                X_batch = X[i:end]
-                
-                # Compute distances only for this batch: [batch_N, K]
-                dists = torch.cdist(X_batch, centroids, p=2) ** 2
-                
-                batch_labels = torch.argmin(dists, dim=1)
-                labels[i:end] = batch_labels
-                
-                # Accumulate inertia for the batch
-                inertia += dists[torch.arange(end-i, device=self.device), batch_labels].sum()
-                
-                del dists, X_batch # Explicitly free memory
+        for _ in range(num_iters):
+            # Assign
+            dists = torch.cdist(X, centroids, p=2) ** 2  # [N, K]
+            labels = torch.argmin(dists, dim=1)          # [N]
+            inertia = dists[torch.arange(N, device=self.device), labels].sum()
 
-            # 3. Early Stopping (Same as before)
+            # Early stopping based on relative improvement
             if prev_inertia is not None:
                 rel_improvement = (prev_inertia - inertia).abs() / (prev_inertia.abs() + 1e-9)
                 if rel_improvement < tol:
                     break
             prev_inertia = inertia
 
-            # 4. Update Centroids
+            # Update
             new_centroids = torch.zeros(K, D, device=self.device, dtype=X.dtype)
             counts = torch.zeros(K, device=self.device, dtype=X.dtype)
 
             new_centroids.index_add_(0, labels, X)
-            counts.index_add_(0, labels, torch.ones(N, device=self.device, dtype=X.dtype))
+            ones = torch.ones(N, device=self.device, dtype=X.dtype)
+            counts.index_add_(0, labels, ones)
 
-            # Handle averages and empty clusters
             empty_mask = counts == 0
-            new_centroids[~empty_mask] /= counts[~empty_mask].unsqueeze(1)
+            non_empty_mask = ~empty_mask
 
+            new_centroids[non_empty_mask] /= counts[non_empty_mask].unsqueeze(1)
+
+            # Re-seed empty clusters with random points
             if empty_mask.any():
                 n_empty = int(empty_mask.sum().item())
                 rand_indices = torch.randperm(N, device=self.device)[:n_empty]
                 new_centroids[empty_mask] = X[rand_indices]
 
             centroids = new_centroids
-            
-            if verbose:
-                print(f"Iteration {iter_idx}: Inertia = {inertia.item():.4f}")
 
         return centroids, labels
 

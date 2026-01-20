@@ -1,5 +1,5 @@
 from typing import Optional, Sequence
-from transformers import BertTokenizer, BertModel
+from transformers import BertTokenizerFast, BertModel
 from datasets import Dataset
 import torch
 import numpy as np
@@ -7,10 +7,11 @@ import tqdm
 
 class KMeansPOSClusterer:
     def __init__(self):
-        self.tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+        self.tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased")
         self.model = BertModel.from_pretrained("bert-base-uncased")
-        self.model.eval()  # we’re just embedding, no training
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model.to(self.device)
+        self.model.eval() 
         self.centroids = None
 
 
@@ -191,7 +192,7 @@ class KMeansPOSClusterer:
 
         # We'll build new columns as Python lists then add them.
         all_embs = []
-        new_cols: Dict[str, list] = {out_col: all_embs}
+        new_cols = {out_col: all_embs}
 
         # Prepare truncation buffers if requested and column exists
         trunc_cols = []
@@ -244,6 +245,108 @@ class KMeansPOSClusterer:
             ds2 = ds2.add_column(c, values)
 
         return ds2
+
+    @torch.no_grad()
+    def fit(
+        self,
+        ds: Dataset,
+        K: int,
+        *,
+        form_col: str = "form",
+        embeddings_col: Optional[str] = None,   # e.g. "embeddings" if already computed
+        num_iters: int = 20,
+        tol: float = 1e-4,
+        verbose: bool = False,
+        show_progress: bool = True,
+    ):
+        """
+        Train k-means and set self.centroids.
+
+        Args:
+            ds: HF Dataset. Must contain form_col (list[str] per row). If embeddings_col
+                is provided, it must contain per-row embeddings as nested lists [T, D].
+            K: number of clusters.
+            form_col: column containing tokenized sentence (list[str]).
+            embeddings_col: if not None, use ds[embeddings_col] instead of recomputing.
+            num_iters, tol, verbose: passed to kmeans_lloyd.
+            show_progress: show tqdm progress.
+
+        Returns:
+            (centroids, labels):
+              centroids: [K, D] float32 tensor on self.device
+              labels:    [N_total_tokens] long tensor on CPU
+        """
+        if K <= 0:
+            raise ValueError(f"K must be positive, got {K}")
+
+        if embeddings_col is not None:
+            if embeddings_col not in ds.column_names:
+                raise ValueError(
+                    f"embeddings_col='{embeddings_col}' not found in dataset columns: {ds.column_names}"
+                )
+            iterator = ds if not show_progress else tqdm.tqdm(ds, desc="Collecting embeddings", total=len(ds))
+
+            chunks = []
+            total_tokens = 0
+            for ex in iterator:
+                embs_list = ex[embeddings_col]  # nested list [T, D]
+                embs = torch.tensor(embs_list, dtype=torch.float32, device=self.device)
+                if embs.ndim != 2:
+                    raise ValueError(f"Expected per-example embeddings with shape [T, D], got {tuple(embs.shape)}")
+                chunks.append(embs)
+                total_tokens += embs.shape[0]
+
+            if total_tokens == 0:
+                raise ValueError("No token embeddings found (dataset appears empty).")
+
+            X = torch.cat(chunks, dim=0)  # [N, D] on device
+
+        else:
+            if form_col not in ds.column_names:
+                raise ValueError(
+                    f"form_col='{form_col}' not found in dataset columns: {ds.column_names}"
+                )
+
+            iterator = ds if not show_progress else tqdm.tqdm(ds, desc="Embedding + collecting", total=len(ds))
+
+            chunks = []
+            total_tokens = 0
+            for ex in iterator:
+                tokens = ex[form_col]
+                if not isinstance(tokens, (list, tuple)):
+                    raise ValueError(f"Expected {form_col} to be list[str], got {type(tokens)}")
+
+                w_embs = self.get_word_embeddings_for_sentence(list(tokens))  # [T, D] on device
+                if w_embs.ndim != 2:
+                    raise ValueError(f"Expected word embeddings with shape [T, D], got {tuple(w_embs.shape)}")
+
+                # Ensure float32 for stable distances / k-means updates
+                w_embs = w_embs.to(self.device, dtype=torch.float32)
+                chunks.append(w_embs)
+                total_tokens += w_embs.shape[0]
+
+            if total_tokens == 0:
+                raise ValueError("No token embeddings produced (dataset appears empty).")
+
+            X = torch.cat(chunks, dim=0)  # [N, D] on device float32
+
+        N = X.shape[0]
+        if K > N:
+            raise ValueError(f"K={K} cannot be larger than number of points N={N}")
+
+        centroids, labels = self.kmeans_lloyd(
+            X=X,
+            K=K,
+            num_iters=num_iters,
+            tol=tol,
+            verbose=verbose,
+        )
+
+        # Store for prediction
+        self.centroids = centroids.to(self.device, dtype=torch.float32)
+
+        # Return labels on CPU for convenience
+        return self.centroids, labels.detach().to(torch.long).cpu()
 
 
 

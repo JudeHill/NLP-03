@@ -39,7 +39,7 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         B = torch.rand(self.num_states, self.num_obs, device=self.device)
         self.transition_prob = A
         self.emission_prob = B
-        self.logify()
+        self.convert_log_space()
  
         # TODO: optimize training by using UNK token
 
@@ -49,7 +49,7 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         B = torch.rand(self.num_states, self.num_obs, device=self.device)
         self.transition_prob = A
         self.emission_prob = B
-        self.logify()
+        self.convert_log_space()
 
     def train(
         self,
@@ -83,11 +83,31 @@ class HMMClassifier(BaseUnsupervisedClassifier):
     def inference(self, input_ids) -> list:
         return self.viterbi_log(input_ids)
     
-    def logify(self):
+    def convert_log_space(self):
+        if self.log_scale:
+            return
         # if they’re counts, convert to prob then log-normalize:
         self.transition_prob = self._normalize_log(self.transition_prob)
         self.emission_prob   = self._normalize_log(self.emission_prob)
         self.log_scale = True
+
+    def convert_linear_space(self):
+        """
+        Converts transition and emission matrices from log-probabilities 
+        back to standard probability space [0, 1].
+        """
+        if not self.log_scale:
+            return  # Already in linear space
+            
+        # Use np.exp to reverse the log operation
+        self.transition_prob = np.exp(self.transition_prob)
+        self.emission_prob   = np.exp(self.emission_prob)
+        self.emission_prob = self._normalize(self.emission_prob)
+        self.transition_prob = self._normalize(self.transition_prob)
+        self.log_scale = False
+
+
+
 
     def counts_to_log_probs(self, counts):
         """Convert count matrix to log probabilities"""
@@ -138,7 +158,8 @@ class HMMClassifier(BaseUnsupervisedClassifier):
     def train_logmle(self, inputs: Dataset):
         """Train with MLE algorithm using log likelihood to avoid underflow"""
         logger.info("Running log-scale MLE")
-        assert not self.log_scale
+        if self.log_scale:
+            self.convert_linear_space()
         for sentence in tqdm(inputs, "Log-MLE training", len(inputs)):
             # Tokens should have been tokenized
             input_ids = sentence["input_ids"]
@@ -156,9 +177,7 @@ class HMMClassifier(BaseUnsupervisedClassifier):
                 # Update emission probabilities
                 self.emission_prob[tags[i], input_ids[i]] += 1
 
-        self.transition_prob = self._normalize_log(self.transition_prob)
-        self.emission_prob = self._normalize_log(self.emission_prob)
-        self.log_scale = True
+        
 
     def train_EM_log(
         self,
@@ -171,7 +190,7 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         Train an HMM with the standard EM algorithm
         """
         if not self.log_scale:
-            self.logify()
+            self.convert_log_space()
             self.log_scale = True
         if not continue_training:
             if initial_guesses is None:
@@ -255,7 +274,7 @@ class HMMClassifier(BaseUnsupervisedClassifier):
 
             self.transition_prob.copy_(trans_counts)
             self.emission_prob.copy_(emis_counts)  # ← FIX: use emis_counts, not expected_emissions
-            self.logify()
+            self.convert_log_space()
 
     def train_EM_hard_log(
         self,
@@ -275,7 +294,7 @@ class HMMClassifier(BaseUnsupervisedClassifier):
             else:
                 self.reset()
         if not self.log_scale:
-            self.logify()
+            self.convert_log_space()
             self.log_scale = True
         for _ in range(num_iter):
             emis_counts = torch.full((self.num_states, self.num_obs), self.epsilon, device=self.device)
@@ -296,7 +315,7 @@ class HMMClassifier(BaseUnsupervisedClassifier):
 
             self.transition_prob = trans_counts
             self.emission_prob = emis_counts
-            self.logify()
+            self.convert_log_space()
 
     def train_sEM(
         self,
@@ -334,7 +353,7 @@ class HMMClassifier(BaseUnsupervisedClassifier):
                 self.log_scale = True
 
         if not self.log_scale:
-            self.logify()
+            self.convert_log_space()
 
         # Hard-enforce dummy-column is impossible in log-space
         with torch.no_grad():
@@ -485,7 +504,7 @@ class HMMClassifier(BaseUnsupervisedClassifier):
     def viterbi_log(self, input_ids):
         """Run Viterbi algorithm with log-scale probabilities (vectorized over states)."""
         if not self.log_scale:
-            self.logify()
+            self.convert_log_space()
 
         T = len(input_ids)
         S = self.num_states

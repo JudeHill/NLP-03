@@ -3,6 +3,215 @@ from tqdm import tqdm
 from utils import calculate_v_measure, calculate_variation_of_information
 import torch
 import pos_tagging.kmeans as kmeans
+import logging
+import os
+from typing import Optional
+from datasets import DatasetDict
+from preprocess_dataset import *  # load_ptb_dataset, wrap_dataset, create_tag_mapping
+from utils import calculate_v_measure, calculate_variation_of_information
+
+logger = logging.getLogger()
+
+def _save_centroids(clusterer: kmeans.KMeansPOSClusterer, save_path: str) -> None:
+    if clusterer.centroids is None:
+        raise ValueError("No centroids to save (clusterer.centroids is None).")
+    os.makedirs(os.path.dirname(save_path) or ".", exist_ok=True)
+    torch.save(clusterer.centroids.detach().cpu(), save_path)
+
+
+def _load_centroids(clusterer: kmeans.KMeansPOSClusterer, load_path: str) -> None:
+    centroids = torch.load(load_path, map_location=clusterer.device)
+    if not isinstance(centroids, torch.Tensor):
+        raise TypeError(f"Loaded centroids must be a torch.Tensor, got {type(centroids)}")
+    clusterer.centroids = centroids.to(clusterer.device, dtype=torch.float32)
+
+
+def train_and_test(
+    K: int,
+    tag_name: str,
+    subset,
+    load_path: Optional[str],
+    save_path: Optional[str],
+    res_path: str,
+    *,
+    num_iters: int = 20,
+    tol: float = 1e-4,
+):
+    """
+    KMeans pipeline mirroring hmm_pipeline.train_and_test(...) patterns.
+
+    Args:
+        K: number of clusters.
+        tag_name: "upos" or "xpos" (same as HMM pipeline).
+        subset: passed through to load_ptb_dataset(line_num=subset).
+        load_path: optional path to load centroids instead of training.
+        save_path: optional path to save centroids after training.
+        res_path: CSV output path (same format style as eval_hmm).
+        num_iters, tol: k-means hyperparameters.
+    """
+    logger.warning(f"Using {tag_name} as tag")
+
+    # Load and wrap PTB dataset (same as HMM pipeline)
+    sentences, upos_set, xpos_set = load_ptb_dataset(line_num=subset)
+    dataset = wrap_dataset(sentences)
+
+    tag_mapping = {
+        "upos": create_tag_mapping(upos_set),
+        "xpos": create_tag_mapping(xpos_set),
+    }[tag_name]
+
+    def map_tag(examples):
+        # Using UPoS/XPoS as tags (mapped to ints)
+        tags = []
+        for tag in examples[tag_name]:
+            tags.append(tag_mapping[tag])
+        examples["tags"] = tags
+        return examples
+
+    dataset = dataset.map(map_tag, desc="Mapping tags")
+
+    # Match your HMM pattern (train == test unless you change it later)
+    dataset_splits = DatasetDict({"train": dataset, "test": dataset})
+
+    # Create clusterer
+    clusterer = kmeans.KMeansPOSClusterer()
+
+    with torch.no_grad():
+        # ---------------------------------------------------------------------
+        # Embed train/test (adds "embeddings" and ensures token-level columns align)
+        # ---------------------------------------------------------------------
+        logger.info("Embedding train split for k-means")
+        train_ds = clusterer.embed_dataset(
+            dataset_splits["train"],
+            form_col="form",
+            out_col="embeddings",
+            truncate_other_token_cols=("tags",),
+            show_progress=True,
+        )
+
+        logger.info("Embedding test split for k-means")
+        test_ds = clusterer.embed_dataset(
+            dataset_splits["test"],
+            form_col="form",
+            out_col="embeddings",
+            truncate_other_token_cols=("tags",),
+            show_progress=True,
+        )
+
+        # Basic alignment sanity checks (critical for correctness)
+        def _check_alignment(split, split_name: str):
+            for i, ex in enumerate(split):
+                lf = len(ex["form"])
+                lt = len(ex["tags"])
+                le = len(ex["embeddings"])
+                if not (lf == lt == le):
+                    raise ValueError(
+                        f"[{split_name}] Length mismatch at row {i}: "
+                        f"len(form)={lf}, len(tags)={lt}, len(embeddings)={le}"
+                    )
+
+        _check_alignment(train_ds, "train")
+        _check_alignment(test_ds, "test")
+
+        # ---------------------------------------------------------------------
+        # Train or load centroids
+        # ---------------------------------------------------------------------
+        if load_path is not None:
+            logger.info(f"Loading k-means centroids from {load_path}")
+            _load_centroids(clusterer, load_path)
+        else:
+            logger.info("Training k-means centroids")
+            clusterer.fit(
+                train_ds,
+                K=K,
+                form_col="form",
+                embeddings_col="embeddings",  # use cached embeddings we just computed
+                num_iters=num_iters,
+                tol=tol,
+                verbose=False,
+                show_progress=True,
+            )
+
+            if save_path is not None:
+                logger.info(f"Saving k-means centroids to {save_path}")
+                _save_centroids(clusterer, save_path)
+            else:
+                logger.warning("No save path provided. K-means centroids not saved")
+
+        logger.info("Evaluating k-means on test split")
+        eval_kmeans(
+            test_ds,
+            kmeans_clusterer=clusterer,
+            res_path=res_path,
+        )
+
+
+def test(
+    K: int,
+    tag_name: str,
+    subset,
+    load_path: str,
+    res_path: str,
+):
+    """
+    KMeans test-only pipeline mirroring hmm_pipeline.test(...) patterns.
+    Requires load_path for centroids.
+    """
+    logger.warning(f"Using {tag_name} as tag")
+
+    if load_path is None:
+        raise ValueError("load_path must be provided for k-means test().")
+
+    # Load and wrap PTB dataset
+    sentences, upos_set, xpos_set = load_ptb_dataset(line_num=subset)
+    dataset = wrap_dataset(sentences)
+
+    tag_mapping = {
+        "upos": create_tag_mapping(upos_set),
+        "xpos": create_tag_mapping(xpos_set),
+    }[tag_name]
+
+    def map_tag(examples):
+        tags = []
+        for tag in examples[tag_name]:
+            tags.append(tag_mapping[tag])
+        examples["tags"] = tags
+        return examples
+
+    dataset = dataset.map(map_tag, desc="Mapping tags")
+    dataset_splits = DatasetDict({"train": dataset, "test": dataset})
+
+    clusterer = kmeans.KMeansPOSClusterer()
+
+    with torch.no_grad():
+        # Embed test
+        logger.info("Embedding test split for k-means")
+        test_ds = clusterer.embed_dataset(
+            dataset_splits["test"],
+            form_col="form",
+            out_col="embeddings",
+            truncate_other_token_cols=("tags",),
+            show_progress=True,
+        )
+
+        # Alignment check
+        for i, ex in enumerate(test_ds):
+            lf, lt, le = len(ex["form"]), len(ex["tags"]), len(ex["embeddings"])
+            if not (lf == lt == le):
+                raise ValueError(
+                    f"[test] Length mismatch at row {i}: len(form)={lf}, len(tags)={lt}, len(embeddings)={le}"
+                )
+
+        # Load centroids + eval
+        logger.info(f"Loading k-means centroids from {load_path}")
+        _load_centroids(clusterer, load_path)
+
+        logger.info("Evaluating k-means on test split")
+        eval_kmeans(
+            test_ds,
+            kmeans_clusterer=clusterer,
+            res_path=res_path,
+        )
 
 def eval_kmeans(
     dataset_split,

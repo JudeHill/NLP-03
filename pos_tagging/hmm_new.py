@@ -49,6 +49,7 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         B = torch.rand(self.num_states, self.num_obs, device=self.device)
         self.transition_prob = A
         self.emission_prob = B
+        self.log_scale = False
         self.convert_log_space()
 
     def train(

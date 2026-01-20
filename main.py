@@ -17,11 +17,22 @@ if __name__ == "__main__":
     args = arg_parsing()
     if args["model"] == "kmeans":
         # Complete your code here
-        kmeans_pipeline.lloyd(
-            args["subset"],
-            args["save_path"],
-            args["res_path"]
-        )
+        if args["action"] == "train-test":
+            kmeans_pipeline.train_and_test(
+                args["tag"],
+                args["subset"],
+                args["max_epochs"],
+                args["load_path"],
+                args["save_path"],
+                args["res_path"],
+            )
+        else:
+            kmeans_pipeline.test(
+                args["tag"],
+                args["subset"],
+                args["load_path"],
+                args["res_path"],
+            )
     elif args["model"] == "nhmm":
         if args["action"] == "train-test":
             nhmm_pipeline.train_and_test(

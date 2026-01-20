@@ -21,37 +21,96 @@ class KMeansPOSClusterer:
             K: int,
             num_iters: int = 20,
             tol: float = 1e-4,
-            verbose: bool = False
+            verbose: bool = False,
+            init_centroids: Optional[torch.Tensor] = None,
     ):
+        """
+        Lloyd's algorithm for k-means with optional warm start.
+
+        Args:
+            X: [N, D] data on any device/dtype (will be used as-is).
+            K: number of clusters.
+            num_iters: max Lloyd iterations.
+            tol: relative improvement tolerance on inertia for early stopping.
+            verbose: (currently unused; kept for compatibility).
+            init_centroids: optional [K, D] tensor. If provided, algorithm starts from these
+                centroids instead of random initialization (warm start).
+
+        Returns:
+            centroids: [K, D] tensor on self.device, same dtype as X
+            labels: [N] long tensor on self.device
+        """
         N, D = X.shape
-        # init centroids at random
-        indices = torch.randperm(N, device=self.device)[:K]
-        centroids = X[indices]
+        if K <= 0:
+            raise ValueError(f"K must be positive, got {K}")
+        if K > N:
+            raise ValueError(f"K={K} cannot be larger than number of points N={N}")
+
+        # Ensure X is on the clusterer's device
+        if X.device != self.device:
+            X = X.to(self.device)
+        # NOTE: we keep X.dtype as provided; callers typically pass float32.
+
+        # Initialize centroids
+        if init_centroids is None:
+            indices = torch.randperm(N, device=self.device)[:K]
+            centroids = X[indices]
+        else:
+            if not isinstance(init_centroids, torch.Tensor):
+                init_centroids = torch.tensor(init_centroids)
+            if init_centroids.ndim != 2:
+                raise ValueError(
+                    f"init_centroids must have shape [K, D], got {tuple(init_centroids.shape)}"
+                )
+            if init_centroids.shape[0] != K:
+                raise ValueError(
+                    f"init_centroids first dim must be K={K}, got {init_centroids.shape[0]}"
+                )
+            if init_centroids.shape[1] != D:
+                raise ValueError(
+                    f"init_centroids second dim must be D={D}, got {init_centroids.shape[1]}"
+                )
+            centroids = init_centroids.to(self.device, dtype=X.dtype)
+
         prev_inertia = None
-        for i in range(num_iters):
-            dists = torch.cdist(X, centroids, p=2) ** 2
-            labels = torch.argmin(dists,dim=1)
+        labels = None  # set inside loop
+
+        for _ in range(num_iters):
+            # Assign
+            dists = torch.cdist(X, centroids, p=2) ** 2  # [N, K]
+            labels = torch.argmin(dists, dim=1)          # [N]
             inertia = dists[torch.arange(N, device=self.device), labels].sum()
+
+            # Early stopping based on relative improvement
             if prev_inertia is not None:
-                rel_improvement = (prev_inertia - inertia).abs() / (prev_inertia + 1e-9)
+                rel_improvement = (prev_inertia - inertia).abs() / (prev_inertia.abs() + 1e-9)
                 if rel_improvement < tol:
                     break
             prev_inertia = inertia
-            centroids = torch.zeros(K, D, device=self.device, dtype=X.dtype)
-            counts = torch.zeros(K, device=self.device,dtype=X.dtype)
-            centroids.index_add_(0, labels, X)
+
+            # Update
+            new_centroids = torch.zeros(K, D, device=self.device, dtype=X.dtype)
+            counts = torch.zeros(K, device=self.device, dtype=X.dtype)
+
+            new_centroids.index_add_(0, labels, X)
             ones = torch.ones(N, device=self.device, dtype=X.dtype)
             counts.index_add_(0, labels, ones)
+
             empty_mask = counts == 0
             non_empty_mask = ~empty_mask
-            centroids[non_empty_mask] /= counts[non_empty_mask].unsqueeze(1)
 
+            new_centroids[non_empty_mask] /= counts[non_empty_mask].unsqueeze(1)
+
+            # Re-seed empty clusters with random points
             if empty_mask.any():
-                n_empty = empty_mask.sum().item()
+                n_empty = int(empty_mask.sum().item())
                 rand_indices = torch.randperm(N, device=self.device)[:n_empty]
-                centroids[empty_mask] = X[rand_indices]
+                new_centroids[empty_mask] = X[rand_indices]
+
+            centroids = new_centroids
 
         return centroids, labels
+
 
     def get_embeddings(self, inputs: Dataset) -> torch.Tensor:
         """
@@ -258,9 +317,13 @@ class KMeansPOSClusterer:
         tol: float = 1e-4,
         verbose: bool = False,
         show_progress: bool = True,
+        continue_training: bool = False,
     ):
         """
         Train k-means and set self.centroids.
+
+        If continue_training=True and self.centroids is already set, this warm-starts
+        Lloyd's algorithm from the existing centroids (i.e., continues training).
 
         Args:
             ds: HF Dataset. Must contain form_col (list[str] per row). If embeddings_col
@@ -270,21 +333,27 @@ class KMeansPOSClusterer:
             embeddings_col: if not None, use ds[embeddings_col] instead of recomputing.
             num_iters, tol, verbose: passed to kmeans_lloyd.
             show_progress: show tqdm progress.
+            continue_training: if True, warm-start from self.centroids (must be set).
 
         Returns:
             (centroids, labels):
-              centroids: [K, D] float32 tensor on self.device
-              labels:    [N_total_tokens] long tensor on CPU
+            centroids: [K, D] float32 tensor on self.device
+            labels:    [N_total_tokens] long tensor on CPU
         """
         if K <= 0:
             raise ValueError(f"K must be positive, got {K}")
 
+        # -------------------------
+        # Build X: [N, D]
+        # -------------------------
         if embeddings_col is not None:
             if embeddings_col not in ds.column_names:
                 raise ValueError(
                     f"embeddings_col='{embeddings_col}' not found in dataset columns: {ds.column_names}"
                 )
-            iterator = ds if not show_progress else tqdm.tqdm(ds, desc="Collecting embeddings", total=len(ds))
+            iterator = ds if not show_progress else tqdm.tqdm(
+                ds, desc="Collecting embeddings", total=len(ds)
+            )
 
             chunks = []
             total_tokens = 0
@@ -292,7 +361,9 @@ class KMeansPOSClusterer:
                 embs_list = ex[embeddings_col]  # nested list [T, D]
                 embs = torch.tensor(embs_list, dtype=torch.float32, device=self.device)
                 if embs.ndim != 2:
-                    raise ValueError(f"Expected per-example embeddings with shape [T, D], got {tuple(embs.shape)}")
+                    raise ValueError(
+                        f"Expected per-example embeddings with shape [T, D], got {tuple(embs.shape)}"
+                    )
                 chunks.append(embs)
                 total_tokens += embs.shape[0]
 
@@ -307,7 +378,9 @@ class KMeansPOSClusterer:
                     f"form_col='{form_col}' not found in dataset columns: {ds.column_names}"
                 )
 
-            iterator = ds if not show_progress else tqdm.tqdm(ds, desc="Embedding + collecting", total=len(ds))
+            iterator = ds if not show_progress else tqdm.tqdm(
+                ds, desc="Embedding + collecting", total=len(ds)
+            )
 
             chunks = []
             total_tokens = 0
@@ -318,9 +391,10 @@ class KMeansPOSClusterer:
 
                 w_embs = self.get_word_embeddings_for_sentence(list(tokens))  # [T, D] on device
                 if w_embs.ndim != 2:
-                    raise ValueError(f"Expected word embeddings with shape [T, D], got {tuple(w_embs.shape)}")
+                    raise ValueError(
+                        f"Expected word embeddings with shape [T, D], got {tuple(w_embs.shape)}"
+                    )
 
-                # Ensure float32 for stable distances / k-means updates
                 w_embs = w_embs.to(self.device, dtype=torch.float32)
                 chunks.append(w_embs)
                 total_tokens += w_embs.shape[0]
@@ -330,9 +404,28 @@ class KMeansPOSClusterer:
 
             X = torch.cat(chunks, dim=0)  # [N, D] on device float32
 
-        N = X.shape[0]
+        N, D = X.shape
         if K > N:
             raise ValueError(f"K={K} cannot be larger than number of points N={N}")
+
+        # -------------------------
+        # Warm-start / continue training
+        # -------------------------
+        init_centroids = None
+        if continue_training:
+            if self.centroids is None:
+                raise ValueError("continue_training=True but self.centroids is None.")
+            if self.centroids.ndim != 2:
+                raise ValueError(f"self.centroids must have shape [K, D], got {tuple(self.centroids.shape)}")
+            if self.centroids.shape[0] != K:
+                raise ValueError(
+                    f"continue_training=True but K={K} does not match existing centroids K={self.centroids.shape[0]}"
+                )
+            if self.centroids.shape[1] != D:
+                raise ValueError(
+                    f"continue_training=True but embedding dim D={D} does not match centroids D={self.centroids.shape[1]}"
+                )
+            init_centroids = self.centroids.to(self.device, dtype=X.dtype)
 
         centroids, labels = self.kmeans_lloyd(
             X=X,
@@ -340,6 +433,7 @@ class KMeansPOSClusterer:
             num_iters=num_iters,
             tol=tol,
             verbose=verbose,
+            init_centroids=init_centroids,
         )
 
         # Store for prediction
@@ -347,6 +441,7 @@ class KMeansPOSClusterer:
 
         # Return labels on CPU for convenience
         return self.centroids, labels.detach().to(torch.long).cpu()
+
 
 
 

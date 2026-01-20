@@ -261,7 +261,7 @@ class KMeansPOSClusterer:
                     trunc_cols.append(c)
                     new_cols[c] = []
 
-        iterator = ds if not show_progress else tqdm(ds, desc="Embedding dataset", total=len(ds))
+        iterator = ds if not show_progress else tqdm.tqdm(ds, desc="Embedding dataset", total=len(ds))
 
         for ex in iterator:
             tokens = ex[form_col]  # list[str]

@@ -35,11 +35,11 @@ def compute_results(dirs, stats):
         print(d)
         print(final_results[d])
 
-compute_results(dirs, stats)
+# compute_results(dirs, stats)
 
 dirs_xpos = ["XPOS/EM", "XPOS/sEM", "XPOS/hardEM", "XPOS/mle"]
 
-# compute_results(dirs_xpos, stats)
+compute_results(dirs_xpos, stats)
 
 
 

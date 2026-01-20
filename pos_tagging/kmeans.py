@@ -145,20 +145,19 @@ class KMeansPOSClusterer:
                 truncation=True
             )
         else:
-            # fall back to raw string
             enc = self.tokenizer(
                 tokens,
                 return_tensors="pt",
                 truncation=True
             )
 
-        enc = {k: v.to(self.device) for k, v in enc.items()}
+        word_ids = enc.word_ids(batch_index=0)
+        enc = enc.to(self.device)
 
         with torch.no_grad():
             outputs = self.model(**enc)
 
-        token_embeddings = outputs.last_hidden_state[0]  # [seq_len, 768]
-        word_ids = enc.word_ids(batch_index=0)
+        token_embeddings = outputs.last_hidden_state[0] 
 
         word_vecs = []
         buf = []

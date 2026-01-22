@@ -17,6 +17,8 @@ def compute_results(dirs, stats):
         name = "10_5"
         if d == em_dir:
             name = "5_10"
+        elif d == "NHMM":
+            name = "10_1"
         prog_results[d] = {s: [] for s in stats}
             
         final_results[d] = {}
@@ -85,9 +87,9 @@ def plot_all_results():
 
 
 
-prog_results_kmeans, final_results_kmeans = compute_results(["kmeans"], stats)
+prog_results_kmeans, final_results_kmeans = compute_results(["NHMM"], stats)
 print(final_results_kmeans)
-plot_prog_results(stats, prog_results["kmeans"], "K-means clustering results on XPOS tags", "kmeans_xpos.png")
+plot_prog_results(stats, prog_results_kmeans["NH"], "NHMM results on UPOS tags", "nhmm.png")
 
 
 prog_results_kmeans, final_results_kmeans = compute_results(["kmeans"], stats)

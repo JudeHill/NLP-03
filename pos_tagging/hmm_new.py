@@ -59,7 +59,7 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         epochs: int = 5,
         method: str = "mle",
         continue_training=False,
-        alpha=0.6
+        alpha=0.8
     ) -> None:
         if method == "mle":
             self.train_logmle(inputs)

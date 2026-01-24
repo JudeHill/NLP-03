@@ -72,6 +72,13 @@ def arg_parsing():
         help="path to load or save the BERT outputs for K-means method, use `.pt`.",
         metavar="PATH",
     )
+    argparser.add_argument(
+        "--alpha",
+        dest="alpha",
+        default=0.6,
+        help="For sEM, the value of the learning rate parameter alpha",
+        metavar="FLOAT",
+    )
     args = argparser.parse_args()
     args = vars(args)
     return args

@@ -29,6 +29,7 @@ def compute_results(dirs, stats):
             for s in stats:
                 prog_results[d][s].append(float(summary_stats[s]))
         filepath = f"{d}/{name}.csv"
+        df = pd.read_csv(filepath)
         summary_stats = df.iloc[0]
         for s in stats:
             final_results[d][s] = float(summary_stats[s])
@@ -42,7 +43,7 @@ def plot_prog_results(stats, results, label="", filename="prog_results.png"):
     The ith element corresponds to 5*(i+1) epochs.
     """
     # Create the x-axis: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
-    epochs = [5 * (i + 1) for i in range(len(next(iter(results.values()))))]
+    epochs = [1 * (i + 1) for i in range(len(next(iter(results.values()))))]
     
     plt.figure(figsize=(6, 4)) 
     
@@ -62,11 +63,7 @@ def plot_prog_results(stats, results, label="", filename="prog_results.png"):
     plt.savefig(filename)
 
 
-prog_results, _ = compute_results(dirs, stats)
 
-dirs_xpos = ["XPOS/EM", "XPOS/sEM", "XPOS/hardEM", "XPOS/mle"]
-
-prog_results_xpos, _ = compute_results(dirs_xpos, stats)
 
 
 
@@ -85,12 +82,31 @@ def plot_all_results():
         plot_prog_results(["V-score", "normalized-VI"], prog_results_xpos[dir], label=label, filename=filename)
 
 
+def compute_results_sEM(filenames, tag, stats):
+    prog_results = {}
+    final_results = {}
 
+    dir = "sEM"
+    if tag == "XPOS":
+        dir = f"XPOS/{dir}"
+    for name in filenames:
+        prog_results[name] = {s: [] for s in stats}
+            
+        final_results[name] = {}
+        for i in range(10):
+            filepath = f"{dir}/{name}.{i}.csv"
+            df = pd.read_csv(filepath)
+            summary_stats = df.iloc[0]
+            for s in stats:
+                prog_results[name][s].append(float(summary_stats[s]))
+        filepath = f"{dir}/{name}.csv"
+        summary_stats = df.iloc[0]
+        for s in stats:
+            final_results[name][s] = float(summary_stats[s])
 
-prog_results_kmeans, final_results_kmeans = compute_results(["NHMM"], stats)
-print(final_results_kmeans)
-plot_prog_results(stats, prog_results_kmeans["NH"], "NHMM results on UPOS tags", "nhmm.png")
+    return prog_results, final_results
 
+prog_results, final_results = compute_results_sEM(["alpha_6"], "XPOS", ["normalized-VI", "V-score"])
+plot_prog_results(["normalized-VI", "V-score"], prog_results["alpha_6"], "Convergence of sEM using XPOS tags with alpha=0.6", "sEM_xpos_6.png")
 
-prog_results_kmeans, final_results_kmeans = compute_results(["kmeans"], stats)
 

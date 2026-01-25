@@ -17,9 +17,8 @@ from utils import calculate_v_measure, calculate_variation_of_information
 logger = logging.getLogger()
 
 
-# -----------------------------
+
 # Reproducibility helpers
-# -----------------------------
 def _set_seed(seed: int) -> None:
     random.seed(seed)
     np.random.seed(seed)
@@ -28,9 +27,8 @@ def _set_seed(seed: int) -> None:
         torch.cuda.manual_seed_all(seed)
 
 
-# -----------------------------
+
 # Centroid save/load helpers
-# -----------------------------
 def save_kmeans(
     clusterer: kmeans.KMeansPOSClusterer,
     save_path: str,
@@ -51,9 +49,7 @@ def load_kmeans(
     clusterer.centroids = centroids.to(clusterer.device, dtype=torch.float32)
 
 
-# -----------------------------
 # Alignment safety
-# -----------------------------
 def _check_alignment(
     ds: Dataset,
     *,
@@ -73,9 +69,8 @@ def _check_alignment(
             )
 
 
-# -----------------------------
+
 # Training
-# -----------------------------
 def train_kmeans(
     dataset_splits: DatasetDict,
     *,
@@ -89,9 +84,32 @@ def train_kmeans(
     embeddings_col: str = "embeddings",
 ) -> kmeans.KMeansPOSClusterer:
     """
-    Train a KMeansPOSClusterer on dataset_splits["train"] and optionally save centroids.
-    Mirrors hmm_pipeline.train_hmm(...) pattern.
+    Train a KMeans-based POS clusterer on the training split of a dataset.
+
+    This function embeds the training data, fits a K-means model using the
+    precomputed embeddings, and optionally saves the learned centroids. 
+
+    Args:
+        dataset_splits (DatasetDict): Dataset dictionary containing at least
+            a `"train"` split.
+        K (int): Number of clusters.
+        num_iters (int): Maximum number of K-means (Lloyd) iterations.
+        tol (float, optional): Relative tolerance on inertia improvement for
+            early stopping. Defaults to 1e-4.
+        save_path (str, optional): Path to save the trained K-means centroids.
+            If `None`, centroids are not saved.
+        seed (int, optional): Random seed for reproducibility. Defaults to 0.
+        form_col (str, optional): Name of the column containing token strings.
+            Defaults to `"form"`.
+        tags_col (str, optional): Name of the column containing gold tags, used
+            for alignment checks. Defaults to `"tags"`.
+        embeddings_col (str, optional): Name of the column to store token
+            embeddings. Defaults to `"embeddings"`.
+
+    Returns:
+        clusterer (KMeansPOSClusterer): The trained K-means POS clusterer.
     """
+
     logger.info("Training k-means")
     _set_seed(seed)
 
@@ -145,17 +163,39 @@ def train_kmeans_stage(
     embeddings_col: str = "embeddings",
 ) -> kmeans.KMeansPOSClusterer:
     """
-    Stage-wise training for k-means, analogous to hmm_pipeline.train_hmm_stage(...),
-    but with TRUE continuation across stages (warm-start from previous centroids).
+    Train a K-means POS clusterer in multiple stages using warm-start
+    (continuation) across stages.
 
-    max_epochs:
-      - [N, iters_per_stage]
+    The model is trained for a fixed number of stages, each consisting of a
+    fixed number of Lloyd iterations. The first stage uses random initialization,
+    while subsequent stages continue optimization from the centroids learned in
+    the previous stage. Optionally, intermediate centroids and evaluation results
+    are saved after each stage.
 
-    Each stage:
-      - Stage 0: random init, run iters_per_stage Lloyd iterations
-      - Stage i>0: warm-start from previous centroids, run iters_per_stage more iterations
-      - Optionally save centroids with stage index inserted before file extension
-      - Evaluate on a 5% test subset with stage-indexed CSV (like HMM)
+    Args:
+        dataset_splits (DatasetDict): Dataset dictionary containing `"train"`
+            and `"test"` splits.
+        K (int): Number of clusters.
+        max_epochs (Sequence[int]): A sequence `[N, iters_per_stage]` where `N`
+            is the number of training stages and `iters_per_stage` is the number
+            of Lloyd iterations per stage.
+        tol (float, optional): Relative tolerance on inertia improvement for
+            early stopping within each stage. Defaults to 1e-4.
+        save_path (str, optional): Base path for saving centroids. The stage
+            index is inserted before the file extension.
+        res_path (str, optional): Base path for saving evaluation results. The
+            stage index is inserted before the file extension.
+        seed (int, optional): Random seed for reproducibility. Defaults to 0.
+        form_col (str, optional): Name of the column containing token strings.
+            Defaults to `"form"`.
+        tags_col (str, optional): Name of the column containing gold tags, used
+            for alignment checks. Defaults to `"tags"`.
+        embeddings_col (str, optional): Name of the column used to store token
+            embeddings. Defaults to `"embeddings"`.
+
+    Returns:
+        clusterer (KMeansPOSClusterer): The trained K-means POS clusterer after
+            the final stage.
     """
     if len(max_epochs) != 2:
         raise ValueError(
@@ -174,7 +214,7 @@ def train_kmeans_stage(
 
     clusterer = kmeans.KMeansPOSClusterer()
 
-    # Embed once and reuse across stages (fast + consistent)
+    # Embed once and reuse across stages
     train_ds = clusterer.embed_dataset(
         dataset_splits["train"],
         form_col=form_col,
@@ -240,7 +280,7 @@ def train_kmeans_stage(
             parts.insert(-1, f"{i}")
             t_res_path = ".".join(parts)
 
-            # Match HMM: evaluate on 5% subset
+            # evaluate on 5% subset
             n_eval = max(1, round(len(test_ds) * 0.05)) if len(test_ds) > 0 else 0
             eval_split = test_ds.select(range(n_eval)) if n_eval > 0 else test_ds
 
@@ -255,9 +295,8 @@ def train_kmeans_stage(
 
 
 
-# -----------------------------
+
 # Evaluation
-# -----------------------------
 def eval_kmeans(
     dataset_split: Dataset,
     kmeans_clusterer: kmeans.KMeansPOSClusterer = None,
@@ -269,12 +308,34 @@ def eval_kmeans(
     embeddings_col: str = "embeddings",
 ):
     """
-    Evaluate k-means clustering quality using V-measure and VI.
-    Mirrors hmm_pipeline.eval_hmm(...) signature/pattern.
+    Evaluate a K-means POS clusterer on a dataset split.
 
-    Requires either:
-      - kmeans_clusterer with centroids set
-      - or load_path pointing to saved centroids
+    This function assigns cluster labels to tokens using a trained K-means
+    clusterer and evaluates clustering quality against gold tags using
+    homogeneity, completeness, V-measure, and variation of information (VI).
+    Results are saved to a CSV file.
+
+    Args:
+        dataset_split (Dataset): Dataset split to evaluate.
+        kmeans_clusterer (KMeansPOSClusterer, optional): Trained K-means
+            clusterer with centroids set. If not provided, `load_path` must
+            be specified.
+        load_path (str, optional): Path to saved K-means centroids to load.
+        res_path (str, optional): Path to the CSV file where evaluation results
+            will be written. Defaults to `"kmeans_result.csv"`.
+        form_col (str, optional): Name of the column containing token strings.
+            Defaults to `"form"`.
+        tags_col (str, optional): Name of the column containing gold tags.
+            Defaults to `"tags"`.
+        embeddings_col (str, optional): Name of the column containing token
+            embeddings. If missing, embeddings are computed automatically.
+            Defaults to `"embeddings"`.
+
+    Returns:
+        None
+
+    Raises:
+        ValueError: If neither `kmeans_clusterer` nor `load_path` is provided.
     """
     if kmeans_clusterer is None:
         if load_path is None:
@@ -283,7 +344,7 @@ def eval_kmeans(
         logger.info(f"Loading k-means centroids from {load_path}")
         load_kmeans(kmeans_clusterer, load_path)
 
-    # If embeddings are missing, compute them (keeps eval robust)
+    # If embeddings are missing, compute them
     if embeddings_col not in dataset_split.column_names:
         logger.info("Embeddings column missing in eval split; embedding now")
         dataset_split = kmeans_clusterer.embed_dataset(
@@ -352,9 +413,7 @@ def eval_kmeans(
         writer.writerows(results)
 
 
-# -----------------------------
-# Top-level wrappers (analogous to HMM)
-# -----------------------------
+# Top-level wrappers
 def train_and_test(
     tag_name,
     subset,
@@ -367,15 +426,24 @@ def train_and_test(
     tol: float = 1e-4,
 ):
     """
-    Wrapper analogous to hmm_pipeline.train_and_test(...).
+    Train and evaluate a K-means POS clusterer on the Penn Treebank dataset.
 
-    - method: accepted for signature compatibility (unused by k-means).
-    - tag_name: "upos" or "xpos"
-    - subset: passed to load_ptb_dataset(line_num=subset)
-    - max_epochs: [iters] for single run OR [N, iters_per_stage] for staged runs
-    - load_path: optional path to load centroids for evaluation (used if you want to eval a saved model)
-    - save_path: where to save centroids (single run), or base path for staged saves
-    - res_path: output CSV path (single run), or base path for staged eval outputs
+    Loads and preprocesses the dataset, trains a K-means model (single-stage or staged), 
+    and evaluates clustering quality on the test set.
+
+    Args:
+        tag_name (str): Tag set to use for evaluation ("upos" or "xpos").
+        subset (int): Number of sentences to load from the dataset.
+        max_epochs (Sequence[int]): Either `[iters]` for a single K-means run
+            or `[N, iters_per_stage]` for staged (warm-start) training.
+        load_path (str): Optional path to saved centroids to load for evaluation.
+        save_path (str): Path to save centroids (single run) or base path for
+            staged centroid checkpoints.
+        res_path (str): Path to save evaluation results (single run) or base
+            path for staged evaluation outputs.
+        seed (int, optional): Random seed for reproducibility. Defaults to 0.
+        tol (float, optional): Relative tolerance on inertia improvement for
+            early stopping. Defaults to 1e-4.
     """
     assert len(max_epochs) <= 2
     logger.warning(f"Using {tag_name} as tag")
@@ -420,16 +488,13 @@ def train_and_test(
                 seed=seed,
             )
 
-        # Always do a final eval on the full test set (like HMM does),
-        # using the trained clusterer. If you want to evaluate a saved centroid file,
-        # call `test(...)` instead.
+        # Always do a final eval on the full test set
         eval_kmeans(
             dataset_splits["test"],
             kmeans_clusterer=clusterer,
             load_path=load_path,
             res_path=res_path,
         )
-
 
 def test(
     tag_name,
@@ -440,8 +505,20 @@ def test(
     seed: int = 0,
 ):
     """
-    Test-only wrapper analogous to hmm_pipeline.test(...).
-    Loads centroids from load_path and evaluates on the test dataset.
+    Evaluate a pretrained K-means POS clusterer on the Penn Treebank dataset.
+
+    This is a test-only wrapper that loads saved K-means centroids and evaluates
+    clustering quality on the test split using standard metrics.
+
+    Args:
+        tag_name (str): Tag set to use for evaluation ("upos" or "xpos").
+        subset (int): Number of sentences to load from the dataset.
+        load_path (str): Path to saved K-means centroids.
+        res_path (str): Path to save evaluation results.
+        seed (int, optional): Random seed for reproducibility. Defaults to 0.
+
+    Raises:
+        ValueError: If `load_path` is not provided.
     """
     logger.warning(f"Using {tag_name} as tag")
 

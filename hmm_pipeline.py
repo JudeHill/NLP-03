@@ -5,7 +5,7 @@ import torch
 from datasets import DatasetDict
 from tqdm import tqdm
 
-from pos_tagging.hmm_new import HMMClassifier
+from pos_tagging.hmm import HMMClassifier
 from preprocess_dataset import *
 from utils import calculate_v_measure, calculate_variation_of_information
 
@@ -21,6 +21,27 @@ def train_hmm(
     save_path: str = None,
     alpha: float = 0.6
 ):
+    """
+    Train a Hidden Markov Model (HMM) classifier on a dataset.
+
+    This function initializes an `HMMClassifier`, trains it on the training
+    split of the provided dataset using the specified training method, and
+    optionally saves the trained model to disk.
+
+    Args:
+        method (str): Training method to use 
+        dataset_splits (DatasetDict): Dataset dictionary containing at least
+            a `"train"` split.
+        max_epochs (int): Number of training epochs.
+        num_states (int): Number of hidden states.
+        num_obs (int): Number of observation symbols.
+        save_path (str, optional): Path to save the trained model. If `None`,
+            the model is not saved.
+        alpha (float, optional): Learning rate hyperparameter for stochastic EM 
+
+    Returns:
+        hmm (HMMClassifier): The trained HMM classifier.
+    """
     logger.info("Training HMM")
     hmm = HMMClassifier(num_states=num_states, num_obs=num_obs)
     # Training
@@ -48,6 +69,30 @@ def train_hmm_stage(
     res_path: str = None,
     alpha: float = 0.6
 ):
+    """
+    Train a Hidden Markov Model (HMM) in multiple stages.
+
+    This function performs staged training by repeatedly calling the HMM
+    training routine for a fixed number of epochs per stage, optionally saving
+    intermediate model checkpoints and evaluating the model after each stage.
+
+    Args:
+        method (str): Training method to use 
+        dataset_splits (DatasetDict): Dataset dictionary containing `"train"`
+            and `"test"` splits.
+        max_epochs (Tuple[int, int]): A tuple `(N, E)` where `N` is the number
+            of training stages and `E` is the number of epochs per stage.
+        num_states (int): Number of hidden states.
+        num_obs (int): Number of observation symbols.
+        save_path (str, optional): Base path for saving model checkpoints.
+            The stage index is inserted before the file extension.
+        res_path (str, optional): Base path for saving evaluation results.
+            The stage index is inserted before the file extension.
+        alpha (float, optional): Learning rate hyperparameter for stochastic EM. Defaults to 0.6
+
+    Returns:
+        hmm (HMMClassifier): The trained HMM classifier after the final stage.
+    """
     logger.info("Training HMM by stages")
     hmm = HMMClassifier(num_states=num_states, num_obs=num_obs)
     # Training
@@ -90,6 +135,28 @@ def eval_hmm(
     load_path: str = None,
     res_path: str = "hmm_result.csv",
 ):
+    """
+    Evaluate a trained Hidden Markov Model (HMM) on a dataset split.
+
+    This function runs HMM inference on each example in the dataset, compares
+    predicted tags against ground-truth tags, and computes clustering-based
+    evaluation metrics
+
+    Args:
+        dataset_split (Dataset): Dataset split to evaluate (e.g., validation
+            or test set).
+        hmm (HMMClassifier, optional): Trained HMM model. If not provided,
+            `load_path` must be specified.
+        load_path (str, optional): Path to a saved HMM model to load.
+        res_path (str, optional): Path to the CSV file where evaluation results
+            will be written. Defaults to `"hmm_result.csv"`.
+
+    Returns:
+        None
+
+    Raises:
+        ValueError: If neither `hmm` nor `load_path` is provided.
+    """
     if hmm is None:
         if load_path is None:
             raise ValueError(
@@ -114,7 +181,6 @@ def eval_hmm(
         forms = example["form"]
         true_tags = example["tags"]
         pred_tags = hmm.inference(input_ids)
-        # TODO: what tokenizer is used to get ptb-train.conllu???
         sentence = " ".join(forms)
 
         # Compute per-example V-measure and VI
@@ -182,10 +248,6 @@ def eval_hmm(
         # Save per-example results
         writer.writerows(results)
 
-
-# TODO: HMM inference for single sentence
-
-
 def train_and_test(
     method,
     tag_name,
@@ -196,6 +258,25 @@ def train_and_test(
     res_path,
     alpha=0.6
 ):
+    """
+    Train an HMM on the Penn Treebank dataset and evaluate it on the same data.
+
+    This function loads and preprocesses the PTB dataset, maps tokens and tags
+    to integer IDs, trains an HMM using the specified method, and evaluates the
+    trained model using clustering-based metrics.
+
+    Args:
+        method (str): Training method to use (e.g., "em", "hard_em",
+            or "stochastic_em").
+        tag_name (str): Tag set to use for supervision ("upos" or "xpos").
+        subset (int): Number of sentences to load from the dataset.
+        max_epochs (int or Tuple[int, int]): Number of training epochs. If a
+            tuple is provided, staged training is performed.
+        load_path (str): Path to a saved HMM model to load for evaluation.
+        save_path (str): Path to save the trained HMM model.
+        res_path (str): Path to save evaluation results.
+        alpha (float, optional): Learning rate hyperparameter for stochastic EM. Defaults to 0.6
+    """
     assert len(max_epochs) <= 2
     logger.warning(f"Using {tag_name} as tag")
     # Load and wrap PTB dataset
@@ -261,6 +342,19 @@ def test(
     load_path,
     res_path,
 ):
+    """
+    Evaluate a pretrained HMM on the Penn Treebank dataset.
+
+    This function loads and preprocesses the PTB dataset, maps tokens and tags
+    to integer IDs, loads a pretrained HMM from disk, and evaluates it using
+    clustering-based metrics.
+
+    Args:
+        tag_name (str): Tag set to use for evaluation ("upos" or "xpos").
+        subset (int): Number of sentences to load from the dataset.
+        load_path (str): Path to a saved HMM model.
+        res_path (str): Path to save evaluation results.
+    """
     logger.warning(f"Using {tag_name} as tag")
     # Load and wrap PTB dataset
     sentences, upos_set, xpos_set = load_ptb_dataset(line_num=subset)

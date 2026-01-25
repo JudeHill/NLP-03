@@ -66,13 +66,12 @@ def train_nhmm(
         total_loss = 0.0
 
         for example in tqdm(train_split, desc=f"NHMM training epoch {epoch}", total=num_samples):
-            # example["input_ids"] is a list[int] for one sentence
             input_ids = torch.tensor(example["input_ids"], dtype=torch.long, device=device)
             # Use batch size 1 to avoid padding / variable length complications
             batch_emissions = input_ids.unsqueeze(0)  # (1, T)
 
             optimizer.zero_grad()
-            loss = nhmm(batch_emissions)  # model.forward -> negative avg log-likelihood
+            loss = nhmm(batch_emissions)  
             loss.backward()
             optimizer.step()
 
@@ -102,11 +101,33 @@ def train_nhmm_stage(
     res_path: str | None = None,
 ) -> NeuralHMMClassifier:
     """
-    "Stage-wise" training analogous to train_hmm_stage.
+    Train a Neural HMM classifier in multiple stages.
 
-    max_epochs: [N_outer, inner_epochs]
-        - We run N_outer outer loops.
-        - In each outer loop we train for inner_epochs, save a checkpoint and evaluate.
+    This function performs stage-wise training analogous to `train_hmm_stage`.
+    Training proceeds in an outer loop of stages, where each stage consists of
+    several epochs of gradient-based optimization. After each stage, the model
+    can be checkpointed and evaluated on a small subset of the test data.
+
+    Args:
+        dataset_splits (DatasetDict): Dataset dictionary containing `"train"`
+            and `"test"` splits.
+        max_epochs (list[int]): A list `[N_outer, inner_epochs]` where `N_outer`
+            is the number of training stages and `inner_epochs` is the number
+            of epochs per stage.
+        num_states (int): Number of hidden states.
+        vocab_size (int): Size of the observation vocabulary.
+        lr (float, optional): Learning rate for the Adam optimizer.
+            Defaults to 1e-3.
+        device (str or torch.device, optional): Device on which to run training.
+            If `None`, uses CUDA if available.
+        save_path (str, optional): Base path for saving model checkpoints.
+            The stage index is inserted before the file extension.
+        res_path (str, optional): Base path for saving evaluation results.
+            The stage index is inserted before the file extension.
+
+    Returns:
+        nhmm (NeuralHMMClassifier): The trained Neural HMM classifier after the
+        final training stage.
     """
     assert len(max_epochs) == 2, "max_epochs should be [N_outer, inner_epochs]"
 
@@ -168,7 +189,7 @@ def train_nhmm_stage(
             t_path = res_path.split(".")
             t_path.insert(-1, f"{outer_idx}")
             t_path = ".".join(t_path)
-            # Use ~5% of test set for quick evaluation, as in HMM pipeline
+            # Use 5% of test set for quick evaluation
             sub_test = dataset_splits["test"].select(
                 range(round(len(dataset_splits["test"]) * 0.05))
             )
@@ -191,8 +212,25 @@ def eval_nhmm(
     device: str | torch.device | None = None,
 ):
     """
-    Evaluate a NeuralHMMClassifier on a dataset split, compute V-measure & VI,
-    and save per-sentence results to CSV (analogous to eval_hmm).
+    Evaluate a Neural HMM classifier on a dataset split.
+
+    This function runs inference with a trained `NeuralHMMClassifier`,
+    compares predicted state sequences to gold tags, and evaluates clustering
+    quality using homogeneity, completeness, V-measure, and variation of
+    information (VI). Per-example and whole-dataset results are saved to CSV.
+
+    Args:
+        dataset_split (Dataset): Dataset split to evaluate.
+        nhmm (NeuralHMMClassifier, optional): Trained Neural HMM model. If not
+            provided, `load_path` must be specified.
+        load_path (str, optional): Path to a saved Neural HMM model to load.
+        res_path (str, optional): Path to the CSV file where evaluation results
+            will be written. Defaults to `"nhmm_result.csv"`.
+        device (str or torch.device, optional): Device on which to run inference.
+            If `None`, uses CUDA if available.
+
+    Raises:
+        ValueError: If neither `nhmm` nor `load_path` is provided.
     """
     if nhmm is None:
         if load_path is None:
@@ -222,12 +260,10 @@ def eval_nhmm(
         for i, example in enumerate(tqdm(dataset_split, desc="NHMM testing", total=num_samples)):
             input_ids_list = example["input_ids"]
             forms = example["form"]
-            true_tags = example["tags"]  # mapped integer tags
+            true_tags = example["tags"]  
 
             input_ids = torch.tensor(input_ids_list, dtype=torch.long, device=device)
-            # We assume NeuralHMMClassifier exposes an `inference` method that returns
-            # a sequence of predicted state indices of length len(input_ids).
-            pred_tags = nhmm.inference(input_ids).cpu()  # torch.Tensor or list
+            pred_tags = nhmm.inference(input_ids).cpu()  
 
             if isinstance(pred_tags, torch.Tensor):
                 pred_tags_list = pred_tags.tolist()
@@ -314,7 +350,28 @@ def train_and_test(
     device: str | torch.device | None = None,
 ):
     """
-    Top-level function analogous to hmm_pipeline.train_and_test, but for NHMM.
+    Train and evaluate a Neural HMM on the Penn Treebank dataset.
+
+    This function mirrors the HMM and K-means training-and-evaluation pipelines,
+    but uses a Neural HMM trained with gradient-based optimization. It loads and
+    preprocesses the dataset, trains the model (single-stage or staged), and
+    evaluates it using clustering-based metrics.
+
+    Args:
+        tag_name (str): Tag set to use for supervision and evaluation
+            ("upos" or "xpos").
+        subset (int or None): Number of sentences to load from the dataset.
+            If `None`, the full dataset is used.
+        max_epochs (list[int]): Either `[epochs]` for single-stage training or
+            `[N_outer, inner_epochs]` for staged training.
+        load_path (str or None): Path to a saved NHMM model to load for
+            evaluation. If provided, the trained model is not used for eval.
+        save_path (str or None): Path to save the trained NHMM model or base
+            path for staged checkpoints.
+        res_path (str): Path to save evaluation results.
+        lr (float, optional): Learning rate for training. Defaults to 1e-3.
+        device (str or torch.device, optional): Device on which to run training
+            and evaluation. If `None`, uses CUDA if available.
     """
     assert len(max_epochs) <= 2
     logger.warning(f"Using {tag_name} as tag")
@@ -382,7 +439,19 @@ def test(
     device: str | torch.device | None = None,
 ):
     """
-    Only evaluate a saved Neural HMM model, analogous to hmm_pipeline.test.
+    Evaluate a pretrained Neural HMM on the Penn Treebank dataset.
+
+    This is a test-only wrapper that loads a saved Neural HMM model and evaluates
+    it on the dataset using clustering-based metrics.
+
+    Args:
+        tag_name (str): Tag set to use for evaluation ("upos" or "xpos").
+        subset (int or None): Number of sentences to load from the dataset.
+            If `None`, the full dataset is used.
+        load_path (str): Path to a saved Neural HMM model.
+        res_path (str): Path to save evaluation results.
+        device (str or torch.device, optional): Device on which to run inference.
+            If `None`, uses CUDA if available.
     """
     logger.warning(f"Using {tag_name} as tag")
     sentences, upos_set, xpos_set = load_ptb_dataset(line_num=subset)

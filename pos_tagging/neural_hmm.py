@@ -16,10 +16,25 @@ class NeuralHMMClassifier(nn.Module):
         trans_hidden_dim: int = 128,
         
     ):
+        """
+        Initialize a neural parameterization of a Hidden Markov Model (HMM).
+
+        This module defines learnable parameters for initial state probabilities,
+        emission distributions, and transition probabilities using neural
+        embeddings and linear projections.
+
+        Args:
+            num_states (int): Number of hidden states.
+            vocab_size (int): Size of the observation vocabulary.
+            tag_emb_dim (int, optional): Dimensionality of tag and word embeddings.
+                Defaults to 128.
+            trans_hidden_dim (int, optional): Dimensionality of the hidden
+                representation used to parameterize state transition probabilities.
+                Defaults to 128.
+        """
         super().__init__()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Using device {self.device}")
-        # gpu_check.check()
         self.init_logits = nn.Parameter(torch.zeros(num_states))
         self.tag_embed = nn.Embedding(num_states, tag_emb_dim)
         self.word_embed = nn.Embedding(vocab_size, tag_emb_dim)
@@ -72,7 +87,7 @@ class NeuralHMMClassifier(nn.Module):
         return F.log_softmax(scores, dim=1)
         ...
     
-    # ---- HMM inference helpers (no neural nets here) ----
+    # ---- HMM inference helpers ----
 
     def forward_algorithm(
         self,
@@ -81,14 +96,32 @@ class NeuralHMMClassifier(nn.Module):
         log_A: torch.Tensor,
         log_B: torch.Tensor,
     ) -> torch.Tensor:
+
         """
-        emissions: (T,) integer word indices for a single sequence,
-        log_pi:    (K,)
-        log_A:     (K, K)
-        log_B:     (K, V)
+        Compute log forward probabilities for a single observation sequence.
+
+        This function implements the forward pass of the forward-backward
+        algorithm in log space. For each time step t and state k, it computes
+
+            log α_t(k) = log p(o_1, …, o_t, z_t = k),
+
+        using the recursive relation
+
+            log α_t = logsumexp(log α_{t-1} + log A) + log B(o_t).
+
+        Args:
+            emissions : torch.Tensor, shape (T,)
+                Sequence of observed symbol indices.
+            log_pi : torch.Tensor, shape (K,)
+                Log initial state probabilities.
+            log_A : torch.Tensor, shape (K, K)
+                Log transition probability matrix.
+            log_B : torch.Tensor, shape (K, V)
+                Log emission probability matrix.
 
         Returns:
-            log_alpha: (T, K) log forward probabilities.
+            log_alpha : torch.Tensor, shape (T, K)
+                Log forward probabilities for each time step and state.
         """
         # Standard log-space forward recursion
         T = emissions.shape[0]
@@ -111,14 +144,36 @@ class NeuralHMMClassifier(nn.Module):
         log_B: torch.Tensor,
     ):
         """
-        Run forward-backward on one sequence.
+        Run the forward-backward algorithm on a single observation sequence.
+
+        This function combines `forward_algorithm` and `backward_algorithm` to
+        compute posterior state and transition probabilities, as well as the
+        log-likelihood of the sequence under the model. See the docstrings of
+        `forward_algorithm` and `backward_algorithm` for detailed descriptions
+        of the underlying recursions.
+
+        Args:
+            emissions : torch.Tensor, shape (T,)
+                Sequence of observed symbol indices.
+            log_pi : torch.Tensor, shape (K,)
+                Log initial state probabilities.
+            log_A : torch.Tensor, shape (K, K)
+                Log transition probability matrix.
+            log_B : torch.Tensor, shape (K, V)
+                Log emission probability matrix.
 
         Returns:
-            log_alpha: (T, K)
-            log_beta:  (T, K)
-            log_gamma: (T, K)
-            log_xi:    (T-1, K, K)
-            log_likelihood: ()
+            log_alpha : torch.Tensor, shape (T, K)
+                Log forward probabilities.
+            log_beta : torch.Tensor, shape (T, K)
+                Log backward probabilities.
+            log_gamma : torch.Tensor, shape (T, K)
+                Log posterior state probabilities.
+            log_xi : torch.Tensor, shape (T-1, K, K)
+                Log posterior transition probabilities.
+            log_likelihood : torch.Tensor
+                Log-likelihood of the observation sequence.
+
         """
         T = emissions.shape[0]
         K = log_pi.shape[0]
@@ -147,11 +202,21 @@ class NeuralHMMClassifier(nn.Module):
 
     def forward(self, batch_emissions: torch.Tensor) -> torch.Tensor:
         """
-        batch_emissions: (B, T)
-        Every sequence has length T. No padding tokens.
+        Compute the negative average log-likelihood for a batch of sequences.
+
+        For each sequence in the batch, this method computes the log-likelihood
+        using the forward algorithm. See `forward_algorithm` for a detailed
+        description of the underlying recursion.
+
+        Args:
+            batch_emissions : torch.Tensor, shape (B, T)
+                Batch of observation sequences. All sequences must have the same
+                length and contain no padding tokens.
 
         Returns:
-            loss: scalar = negative average log-likelihood over batch.
+            loss : torch.Tensor
+                Scalar tensor equal to the negative average log-likelihood over
+                the batch.
         """
         self.to(self.device)
         batch_emissions = batch_emissions.to(self.device)
@@ -185,9 +250,30 @@ class NeuralHMMClassifier(nn.Module):
         log_B: torch.Tensor,
     ) -> torch.Tensor:
         """
-        emissions: (T,)
+        Compute log backward probabilities for a single observation sequence.
+
+        This function implements the backward pass of the forward-backward
+        algorithm in log space. For each time step t and state k, it computes
+
+            log β_t(k) = log p(o_{t+1}, …, o_T | z_t = k),
+
+        using the recursive relation
+
+            log β_t = logsumexp(log A + log B(o_{t+1}) + log β_{t+1}).
+
+        Args:    
+            emissions : torch.Tensor, shape (T,)
+                Sequence of observed symbol indices.
+            log_pi : torch.Tensor, shape (K,)
+                Log initial state probabilities. 
+            log_A : torch.Tensor, shape (K, K)
+                Log transition probability matrix.
+            log_B : torch.Tensor, shape (K, V)
+                Log emission probability matrix.
+
         Returns:
-            log_beta: (T, K)
+            log_beta : torch.Tensor, shape (T, K)
+                Log backward probabilities for each time step and state.
         """
         T = emissions.shape[0]
         K = log_pi.shape[0]
@@ -208,15 +294,29 @@ class NeuralHMMClassifier(nn.Module):
 
         return log_beta
 
-    
-    # ---- Optional: function to get posteriors for analysis ----
-
-
     def infer_posteriors(self, emissions: torch.Tensor):
         """
-        Convenience method to return γ and ξ for a single sequence,
-        for analysis or EM-style updates if desired.
+        Compute posterior state and transition probabilities for a single sequence.
+
+        This is a convenience wrapper around `forward_backward` that returns the
+        posterior state probabilities (γ), posterior transition probabilities (ξ),
+        and the log-likelihood of the sequence under the model. See
+        `forward_backward` for details of the underlying computations.
+
+        Args:
+            emissions : torch.Tensor, shape (T,)
+                Sequence of observed symbol indices.
+
+        Returns:
+            log_gamma : torch.Tensor, shape (T, K)
+                Log posterior state probabilities.
+            log_xi : torch.Tensor, shape (T-1, K, K)
+                Log posterior transition probabilities.
+            log_likelihood : torch.Tensor
+                Log-likelihood of the observation sequence.
+
         """
+
         self.to(self.device)
         emissions = emissions.to(self.device)
 

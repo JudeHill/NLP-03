@@ -7,6 +7,12 @@ import tqdm
 
 class KMeansPOSClusterer:
     def __init__(self):
+        """
+        Initialize a BERT-based embedding model for K-means clustering.
+
+        Loads a pretrained `bert-base-uncased` tokenizer and model.
+        Centroids are initialized to `None`.
+        """
         self.tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased")
         self.model = BertModel.from_pretrained("bert-base-uncased")
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -23,13 +29,56 @@ class KMeansPOSClusterer:
             tol: float = 1e-4,
             verbose: bool = False,
             init_centroids: Optional[torch.Tensor] = None,
-            batch_size: int = 50000, # Added for RAM safety
+            batch_size: int = 50000, 
     ):
+        """
+        Perform K-means clustering using Lloyd's algorithm.
+
+        The algorithm seeks cluster centroids that minimize the within-cluster
+        sum of squared distances:
+
+            ∑_{i=1}^N ‖x_i - c_{z_i}‖²,
+
+        where each point x_i is assigned to a cluster z_i ∈ {1, …, K}. Optimization
+        proceeds by alternating between:
+
+        - **Assignment step**: assign each point to its nearest centroid
+        - **Update step**: recompute each centroid as the mean of its assigned points
+
+        These two steps are repeated until the objective stops improving or the
+        maximum number of iterations is reached. Distance computations in the
+        assignment step are performed in batches to reduce memory usage.
+
+        Parameters
+        ----------
+        X : torch.Tensor, shape (N, D)
+            Input data matrix.
+        K : int
+            Number of clusters.
+        num_iters : int, default=20
+            Maximum number of iterations.
+        tol : float, default=1e-4
+            Relative tolerance on inertia improvement for early stopping.
+        verbose : bool, default=False
+            If True, prints the objective value at each iteration.
+        init_centroids : torch.Tensor, optional
+            Initial centroids of shape (K, D). If None, centroids are initialized
+            by sampling points from `X`.
+        batch_size : int, default=50000
+            Number of samples per batch when computing distances.
+
+        Returns
+        -------
+        centroids : torch.Tensor, shape (K, D)
+            Final cluster centroids.
+        labels : torch.Tensor, shape (N,)
+            Cluster assignment for each sample.
+        """
         N, D = X.shape
         if X.device != self.device:
             X = X.to(self.device)
 
-        # 1. Initialize Centroids (Same as before)
+        # Initialize Centroids
         if init_centroids is None:
             indices = torch.randperm(N, device=self.device)[:K]
             centroids = X[indices]
@@ -42,7 +91,7 @@ class KMeansPOSClusterer:
         for iter_idx in range(num_iters):
             inertia = 0.0
             
-            # 2. BATCHED ASSIGNMENT (The RAM Fix)
+            # Batched assignment
             for i in range(0, N, batch_size):
                 end = min(i + batch_size, N)
                 X_batch = X[i:end]
@@ -56,16 +105,16 @@ class KMeansPOSClusterer:
                 # Accumulate inertia for the batch
                 inertia += dists[torch.arange(end-i, device=self.device), batch_labels].sum()
                 
-                del dists, X_batch # Explicitly free memory
+                del dists, X_batch 
 
-            # 3. Early Stopping (Same as before)
+            # Early Stopping 
             if prev_inertia is not None:
                 rel_improvement = (prev_inertia - inertia).abs() / (prev_inertia.abs() + 1e-9)
                 if rel_improvement < tol:
                     break
             prev_inertia = inertia
 
-            # 4. Update Centroids
+            # Update Centroids
             new_centroids = torch.zeros(K, D, device=self.device, dtype=X.dtype)
             counts = torch.zeros(K, device=self.device, dtype=X.dtype)
 
@@ -188,7 +237,6 @@ class KMeansPOSClusterer:
             )
 
         # Compute squared Euclidean distances: [T, K]
-        # torch.cdist returns Euclidean distance; square it for squared distances
         dists = torch.cdist(embs, self.centroids, p=2) ** 2  # [T, K]
 
         # Nearest centroid per token
@@ -240,13 +288,12 @@ class KMeansPOSClusterer:
         iterator = ds if not show_progress else tqdm.tqdm(ds, desc="Embedding dataset", total=len(ds))
 
         for ex in iterator:
-            tokens = ex[form_col]  # list[str]
+            tokens = ex[form_col]  
 
             # Compute [T', D] tensor on device
-            w_embs = self.get_word_embeddings_for_sentence(tokens)  # torch.Tensor [T', D]
+            w_embs = self.get_word_embeddings_for_sentence(tokens)  #  [T', D]
             T_prime = int(w_embs.shape[0])
 
-            # Store as nested Python list so HF Dataset can hold it easily
             new_cols[out_col].append(w_embs.detach().cpu().tolist())
 
             # If BERT truncation reduced length, optionally truncate other token-level columns
@@ -260,8 +307,6 @@ class KMeansPOSClusterer:
                     else:
                         new_cols[c].append(seq)
 
-        # Also consider truncating 'form' itself if mismatch (common when truncation happens)
-        # We do it unconditionally if mismatch is detected.
         if "form" in ds.column_names:
             new_forms = []
             for ex, embs_list in zip(ds, new_cols[out_col]):
@@ -334,7 +379,7 @@ class KMeansPOSClusterer:
             chunks = []
             total_tokens = 0
             for ex in iterator:
-                embs_list = ex[embeddings_col]  # nested list [T, D]
+                embs_list = ex[embeddings_col]  # [T, D]
                 embs = torch.tensor(embs_list, dtype=torch.float32, device=self.device)
                 if embs.ndim != 2:
                     raise ValueError(
@@ -346,7 +391,7 @@ class KMeansPOSClusterer:
             if total_tokens == 0:
                 raise ValueError("No token embeddings found (dataset appears empty).")
 
-            X = torch.cat(chunks, dim=0)  # [N, D] on device
+            X = torch.cat(chunks, dim=0)  # [N, D] 
 
         else:
             if form_col not in ds.column_names:
@@ -365,7 +410,7 @@ class KMeansPOSClusterer:
                 if not isinstance(tokens, (list, tuple)):
                     raise ValueError(f"Expected {form_col} to be list[str], got {type(tokens)}")
 
-                w_embs = self.get_word_embeddings_for_sentence(list(tokens))  # [T, D] on device
+                w_embs = self.get_word_embeddings_for_sentence(list(tokens))  # [T, D] 
                 if w_embs.ndim != 2:
                     raise ValueError(
                         f"Expected word embeddings with shape [T, D], got {tuple(w_embs.shape)}"
@@ -378,15 +423,14 @@ class KMeansPOSClusterer:
             if total_tokens == 0:
                 raise ValueError("No token embeddings produced (dataset appears empty).")
 
-            X = torch.cat(chunks, dim=0)  # [N, D] on device float32
+            X = torch.cat(chunks, dim=0)  # [N, D]
 
         N, D = X.shape
         if K > N:
             raise ValueError(f"K={K} cannot be larger than number of points N={N}")
 
-        # -------------------------
+
         # Warm-start / continue training
-        # -------------------------
         init_centroids = None
         if continue_training:
             if self.centroids is None:
@@ -414,8 +458,6 @@ class KMeansPOSClusterer:
 
         # Store for prediction
         self.centroids = centroids.to(self.device, dtype=torch.float32)
-
-        # Return labels on CPU for convenience
         return self.centroids, labels.detach().to(torch.long).cpu()
 
 

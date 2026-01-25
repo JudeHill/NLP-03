@@ -75,6 +75,7 @@ def arg_parsing():
     argparser.add_argument(
         "--alpha",
         dest="alpha",
+        type=float,
         default=0.6,
         help="For sEM, the value of the learning rate parameter alpha",
         metavar="FLOAT",

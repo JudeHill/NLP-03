@@ -1,3 +1,5 @@
+# This is a scratch script intended to mirror the real one and check it works
+
 echo "Starting results computation"
 # make directories
 # sEM directories (per value for alpha)

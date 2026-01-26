@@ -2,6 +2,8 @@ from typing import Dict
 import pandas as pd
 
 result_dir = "new_results"
+pd.set_option('display.max_columns',  None)
+pd.set_option('display.expand_frame_repr', False)
 
 def generate_df(path, tag, result_dir="", filename="10_5"):
     filepath = f"{result_dir}/{tag}/{path}/{filename}.csv"
@@ -27,7 +29,7 @@ paths = ["EM", "kmeans", "NHMM"]
 filenames = ["10_5", "10_5", "10_1"]
 upos_dfs = {}
 xpos_dfs = {}
-improvement_dfs: Dict[pd.DataFrame] = {} 
+improvement_dfs: Dict[str, pd.DataFrame] = {} 
 for p, name in zip(paths, filenames):
     upos_dfs[p] = generate_df(p, "UPOS", result_dir=result_dir, filename=name)
     xpos_dfs[p] = generate_df(p, "XPOS", result_dir=result_dir, filename=name)

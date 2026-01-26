@@ -2,11 +2,14 @@ import pandas as pd
 
 import matplotlib.pyplot as plt
 
+# This is scratch work and does not work with the new results saving format
+
 em_dir = "EM_10_5_DONOTOVERWRITE"
 
 dirs = [em_dir, "sEM/10_5", "hardEM", "mle", "kmeans"] # NHMM
 stats = ["V-score", "homogeneity", "completeness", "VI", "normalized-VI"]
-
+root_dir = "res"
+fig_dir = "figs"
 
 
 
@@ -17,18 +20,18 @@ def compute_results(dirs, stats):
         name = "10_5"
         if d == em_dir:
             name = "5_10"
-        elif d == "NHMM":
+        elif d == "NHMM" or d == "kmeans":
             name = "10_1"
         prog_results[d] = {s: [] for s in stats}
             
         final_results[d] = {}
         for i in range(10):
-            filepath = f"{d}/{name}.{i}.csv"
+            filepath = f"{root_dir}/{d}/{name}.{i}.csv"
             df = pd.read_csv(filepath)
             summary_stats = df.iloc[0]
             for s in stats:
                 prog_results[d][s].append(float(summary_stats[s]))
-        filepath = f"{d}/{name}.csv"
+        filepath = f"{root_dir}/{d}/{name}.csv"
         df = pd.read_csv(filepath)
         summary_stats = df.iloc[0]
         for s in stats:
@@ -60,7 +63,7 @@ def plot_prog_results(stats, results, label="", filename="prog_results.png"):
     plt.legend()
     plt.grid(True, linestyle='--', alpha=0.7)
     
-    plt.savefig(filename)
+    plt.savefig(f"{fig_dir}/{filename}")
 
 
 
@@ -94,19 +97,19 @@ def compute_results_sEM(filenames, tag, stats):
             
         final_results[name] = {}
         for i in range(10):
-            filepath = f"{dir}/{name}.{i}.csv"
+            filepath = f"{root_dir}/{dir}/{name}.{i}.csv"
             df = pd.read_csv(filepath)
             summary_stats = df.iloc[0]
             for s in stats:
                 prog_results[name][s].append(float(summary_stats[s]))
-        filepath = f"{dir}/{name}.csv"
+        filepath = f"{root_dir}/{dir}/{name}.csv"
         summary_stats = df.iloc[0]
         for s in stats:
             final_results[name][s] = float(summary_stats[s])
 
     return prog_results, final_results
 
-prog_results, final_results = compute_results_sEM(["alpha_6"], "XPOS", ["normalized-VI", "V-score"])
-plot_prog_results(["normalized-VI", "V-score"], prog_results["alpha_6"], "Convergence of sEM using XPOS tags with alpha=0.6", "sEM_xpos_6.png")
+prog_results, final_results = compute_results(["kmeans"], stats)
+plot_prog_results(["normalized-VI", "V-score"], prog_results["kmeans"], "Convergence of NVI and V-score for K-means clustering")
 
 

@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
+# This is a scratch script intended to mirror the real script and test if it works
 
 # setup
 dirs = ["EM", "sEM/alpha_6","sEM/alpha_8", "sEM/alpha_10", "hardEM", "MLE", "kmeans", "NHMM"]

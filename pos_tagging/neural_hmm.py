@@ -17,20 +17,54 @@ class NeuralHMMClassifier(nn.Module):
         
     ):
         """
-        Initialize a neural parameterization of a Hidden Markov Model (HMM).
+        Initialize a Neural Hidden Markov Model (NHMM).
 
-        This module defines learnable parameters for initial state probabilities,
-        emission distributions, and transition probabilities using neural
-        embeddings and linear projections.
+        This module implements a fully differentiable, neural parameterization
+        of a discrete Hidden Markov Model. The model retains the standard HMM
+        factorization
+
+            p(z_1) ∏_t p(z_t | z_{t-1}) p(x_t | z_t),
+
+        but replaces the tabular probability parameters with learnable neural
+        components.
+
+        Model components:
+
+        1. Initial state distribution:
+           - A learnable vector of logits of size (K,), where K = num_states.
+           - Softmaxed to obtain log p(z_1).
+
+        2. Transition model:
+           - A single learned query vector in a latent space of dimension
+             `trans_hidden_dim`.
+           - A linear projection maps this query to K × K transition logits,
+             which are reshaped into a transition matrix.
+           - Each row is normalized with a softmax to produce
+             log p(z_t = j | z_{t-1} = i).
+
+        3. Emission model:
+           - Each hidden state is represented by a learned tag embedding.
+           - Each vocabulary item is represented by a learned word embedding.
+           - Emission logits are computed via a bilinear dot product between
+             tag and word embeddings, plus a learned word bias:
+                 score(k, w) = ⟨u_k, v_w⟩ + b_w
+           - Softmax over the vocabulary yields log p(x_t = w | z_t = k).
+
+        The resulting model is trained end-to-end using gradient-based
+        optimization, with exact sequence likelihoods computed via the
+        forward–backward algorithm in log space.
 
         Args:
-            num_states (int): Number of hidden states.
-            vocab_size (int): Size of the observation vocabulary.
-            tag_emb_dim (int, optional): Dimensionality of tag and word embeddings.
-                Defaults to 128.
-            trans_hidden_dim (int, optional): Dimensionality of the hidden
-                representation used to parameterize state transition probabilities.
-                Defaults to 128.
+            num_states (int):
+                Number of hidden states (tags) in the HMM.
+            vocab_size (int):
+                Size of the discrete observation vocabulary.
+            tag_emb_dim (int, optional):
+                Dimensionality of both tag and word embeddings used in the
+                emission model. Defaults to 128.
+            trans_hidden_dim (int, optional):
+                Dimensionality of the latent representation used to generate
+                transition probabilities. Defaults to 128.
         """
         super().__init__()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -87,7 +121,7 @@ class NeuralHMMClassifier(nn.Module):
         return F.log_softmax(scores, dim=1)
         ...
     
-    # ---- HMM inference helpers ----
+    # HMM inference helpers
 
     def forward_algorithm(
         self,
@@ -368,8 +402,7 @@ class NeuralHMMClassifier(nn.Module):
                 _, _, log_gamma, _, _ = self.forward_backward(
                     emissions, log_pi, log_A, log_B
                 )
-
-                # predicted state = most likely hidden state per position
+                
                 preds_b = torch.argmax(log_gamma, dim=1)  # (T,)
                 all_preds.append(preds_b)
 

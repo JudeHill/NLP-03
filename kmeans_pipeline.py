@@ -365,13 +365,12 @@ def eval_kmeans(
 
     for i, example in enumerate(tqdm(dataset_split, "KMeans testing", num_samples)):
         forms = example[form_col]
-        true_tags = example[tags_col]  # list[int]
+        true_tags = example[tags_col]  
         embs_list = example[embeddings_col]  # nested list [T, D]
 
-        # Create tensor on device
         embs = torch.tensor(embs_list, device=kmeans_clusterer.device, dtype=torch.float32)
 
-        pred_clusters = kmeans_clusterer.predict_sentence(embs)  # [T] on CPU
+        pred_clusters = kmeans_clusterer.predict_sentence(embs)  # [T]
         pred_tags = pred_clusters.tolist()
 
         sentence = " ".join(forms)

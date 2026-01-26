@@ -6,10 +6,32 @@ pd.set_option('display.max_columns',  None)
 pd.set_option('display.expand_frame_repr', False)
 
 def generate_df(path, tag, result_dir="", filename="10_5"):
+    """Loads a specific experiment result CSV into a DataFrame.
+
+    Args:
+        path (str): The method subdirectory (e.g., 'EM', 'NHMM').
+        tag (str): The tagset used, typically 'UPOS' or 'XPOS'.
+        result_dir (str): The root results directory.
+        filename (str): The base filename (default '10_5').
+
+    Returns:
+        pd.DataFrame: Loaded results containing sentence-level metrics.
+    """
     filepath = f"{result_dir}/{tag}/{path}/{filename}.csv"
     return pd.read_csv(filepath)
 
 def generate_difference_df(df_1: pd.DataFrame, df_2: pd.DataFrame):
+    """Loads a specific experiment result CSV into a DataFrame.
+
+    Args:
+        path (str): The method subdirectory (e.g., 'EM', 'NHMM').
+        tag (str): The tagset used, typically 'UPOS' or 'XPOS'.
+        result_dir (str): The root results directory.
+        filename (str): The base filename (default '10_5').
+
+    Returns:
+        pd.DataFrame: Loaded results containing sentence-level metrics.
+    """
     keys = ["id", "sentence"]
     df_1_new = df_1.set_index(keys).sort_index()
     df_2_new = df_2.set_index(keys).sort_index()
@@ -18,6 +40,17 @@ def generate_difference_df(df_1: pd.DataFrame, df_2: pd.DataFrame):
     return df_result.reset_index()
 
 def print_top_bottom(df: pd.DataFrame, label_top, label_bottom, key='V-score'):
+    """Loads a specific experiment result CSV into a DataFrame.
+
+    Args:
+        path (str): The method subdirectory (e.g., 'EM', 'NHMM').
+        tag (str): The tagset used, typically 'UPOS' or 'XPOS'.
+        result_dir (str): The root results directory.
+        filename (str): The base filename (default '10_5').
+
+    Returns:
+        pd.DataFrame: Loaded results containing sentence-level metrics.
+    """
     df.sort_values(by=key, ascending=False, inplace=True)
     print(label_top)
     print(df.head(15))

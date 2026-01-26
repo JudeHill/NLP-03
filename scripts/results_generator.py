@@ -12,6 +12,28 @@ figures_dir = "figures"
 
 
 def compute_results(paths, stats, method_names, results_dir, tag):
+    import pandas as pd
+import matplotlib.pyplot as plt
+
+def compute_results(paths, stats, method_names, results_dir, tag):
+    """Parses CSV files to aggregate progressive and final HMM/clustering results.
+
+    This function traverses a specific directory structure: 
+    {results_dir}/{tag}/{method_path}/{filename}.{iteration}.csv
+    It handles varying epoch increments (1 for NHMM/short runs, 5 for others).
+
+    Args:
+        paths (list[tuple]): List of (directory_path, filename_prefix) tuples.
+        stats (list[str]): List of metric column names to extract (e.g., 'V-score').
+        method_names (dict): Mapping of directory subfolders to display names.
+        results_dir (str): The root directory containing the result folders.
+        tag (str): The dataset tag being processed (e.g., 'UPOS' or 'XPOS').
+
+    Returns:
+        tuple: A tuple containing:
+            - df_prog (pd.DataFrame): Long-form data for progression plots.
+            - df_final (pd.DataFrame): Summary data of the final converged states.
+    """
     prog_data = []
     final_data = []
     
@@ -48,8 +70,15 @@ def compute_results(paths, stats, method_names, results_dir, tag):
 
 
 def plot_prog_results(df, stats, method_name, filename="prog_results.png", save_path="", label = ""):
-    """
-    Plots line graphs for specified metrics over training epochs for a single method.
+    """Generates a line plot showing the convergence of metrics over epochs.
+
+    Args:
+        df (pd.DataFrame): The progression DataFrame containing 'epochs' and metrics.
+        stats (list[str]): List of metrics to plot as individual lines.
+        method_name (str): The 'pretty name' of the method to filter for.
+        filename (str): Name of the output image file.
+        save_path (str): Directory where the image will be saved.
+        label (str): Title of the plot.
     """
     method_df = df[df["method"] == method_name]
     epochs = method_df["epochs"]
@@ -70,8 +99,6 @@ def plot_prog_results(df, stats, method_name, filename="prog_results.png", save_
     plt.close()
 
 
-# Example call:
-# plot_prog_results_df(progressive_results_df, ["V-score", "VI"], "sEM/alpha_6")
 method_names = {
     "EM": "Batch EM",
     "alpha_6": "Stochastic EM (α=0.6)",
@@ -103,6 +130,16 @@ prog_results_xpos, final_results_xpos = compute_results(
 
 
 def plot_all_results(df, tag, save_path):
+    """Iterates through all unique methods in a DataFrame to generate convergence plots.
+
+    This function automatically sanitizes the method names (removing special characters) 
+    to create safe filenames for the saved PNGs.
+
+    Args:
+        df (pd.DataFrame): The progression DataFrame.
+        tag (str): Dataset tag (UPOS/XPOS) used for labels and filenames.
+        save_path (str): Directory to save all generated figures.
+    """
     unique_methods = df["method"].unique()
     for method in unique_methods:
         label = f"NVI and V-score convergence: {method} ({tag})"

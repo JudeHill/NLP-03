@@ -146,7 +146,7 @@ class KMeansPOSClusterer:
         all_word_vecs = []
 
         for forms in tqdm.tqdm(inputs["form"], desc="Embedding sentences"):
-            # forms: list of tokens -> we pass as list, not a single string
+            # forms: list of tokens
             w_embs = self.get_word_embeddings_for_sentence(forms)  # [T, 768]
             all_word_vecs.append(w_embs)
 
@@ -162,7 +162,6 @@ class KMeansPOSClusterer:
         tokens: list of strings (word tokens) OR a raw string.
         returns [T, 768] tensor on self.device
         """
-        # If you pass a list of tokens, use is_split_into_words=True
         if isinstance(tokens, list):
             enc = self.tokenizer(
                 tokens,
@@ -273,7 +272,6 @@ class KMeansPOSClusterer:
         if form_col not in ds.column_names:
             raise ValueError(f"Dataset is missing required column '{form_col}'")
 
-        # We'll build new columns as Python lists then add them.
         all_embs = []
         new_cols = {out_col: all_embs}
 
@@ -333,7 +331,7 @@ class KMeansPOSClusterer:
         K: int,
         *,
         form_col: str = "form",
-        embeddings_col: Optional[str] = None,   # e.g. "embeddings" if already computed
+        embeddings_col: Optional[str] = None,
         num_iters: int = 20,
         tol: float = 1e-4,
         verbose: bool = False,
@@ -364,9 +362,8 @@ class KMeansPOSClusterer:
         if K <= 0:
             raise ValueError(f"K must be positive, got {K}")
 
-        # -------------------------
+
         # Build X: [N, D]
-        # -------------------------
         if embeddings_col is not None:
             if embeddings_col not in ds.column_names:
                 raise ValueError(
@@ -428,7 +425,6 @@ class KMeansPOSClusterer:
         N, D = X.shape
         if K > N:
             raise ValueError(f"K={K} cannot be larger than number of points N={N}")
-
 
         # Warm-start / continue training
         init_centroids = None

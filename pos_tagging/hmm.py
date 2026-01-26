@@ -28,7 +28,6 @@ class HMMClassifier(BaseUnsupervisedClassifier):
             "cuda" if torch.cuda.is_available() else "cpu"
         )
         print(f"Using device {self.device}")
-        # gpu_check.check()
         self.cnt = 0
         self.num_states = num_states
         self.num_obs = num_obs
@@ -107,9 +106,8 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         back to standard probability space [0, 1].
         """
         if not self.log_scale:
-            return  # Already in linear space
+            return 
             
-        # Use np.exp to reverse the log operation
         self.transition_prob = np.exp(self.transition_prob)
         self.emission_prob   = np.exp(self.emission_prob)
         self.emission_prob = self._normalize(self.emission_prob)
@@ -280,6 +278,7 @@ class HMMClassifier(BaseUnsupervisedClassifier):
                 
                 obs = torch.tensor(obs, dtype=torch.long, device=self.device)
 
+                # Forward-backward
                 log_alpha = torch.full((n, self.num_states+1), float('-inf'), device=self.device)
                 log_alpha[0, 1:] = log_A[0, 1:] + log_B[:, obs[0]]
                 for t in range(1, n):
@@ -328,8 +327,7 @@ class HMMClassifier(BaseUnsupervisedClassifier):
                     gamma.T
                 )
 
-            # M step (done after all inputs processed)
-            # After computing expected_initial (counts) in linear space:
+            # After computing expected_initial counts in linear space:
             # M step
             trans_counts = torch.full_like(self.transition_prob, self.epsilon)
             trans_counts[:, 0] = 0.0
@@ -400,6 +398,7 @@ class HMMClassifier(BaseUnsupervisedClassifier):
             self.convert_log_space()
             self.log_scale = True
         for _ in range(num_iter):
+            # E-step
             emis_counts = torch.full((self.num_states, self.num_obs), self.epsilon, device=self.device)
             trans_counts = torch.full((self.num_states+1, self.num_states+1), self.epsilon, device=self.device)
             trans_counts[:, 0] = 0.0
@@ -416,6 +415,7 @@ class HMMClassifier(BaseUnsupervisedClassifier):
                 for t in range(T - 1):
                     trans_counts[path[t] + 1, path[t+1] + 1] += 1
 
+            # M-step
             self.transition_prob = trans_counts
             self.emission_prob = emis_counts
             self.convert_log_space()
@@ -477,10 +477,9 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         eps = self.epsilon
         neg_inf = float("-inf")
 
-        # ----- Initialize parameters -----
         if not continue_training:
             if initial_guesses is None:
-                self.reset()  # random + logify()
+                self.reset()  
             else:
                 A, B = initial_guesses
                 self.transition_prob = A.to(self.device)
@@ -490,13 +489,11 @@ class HMMClassifier(BaseUnsupervisedClassifier):
         if not self.log_scale:
             self.convert_log_space()
 
-        # Hard-enforce dummy-column is impossible in log-space
         with torch.no_grad():
             self.transition_prob[:, 0] = neg_inf
 
-        # ----- Initialize EMA "counts" from current params -----
-        # We'll keep EMAs in linear space.
         with torch.no_grad():
+            # Initialise Exponential moving avg (EMA) tensors
             A_prob = torch.exp(self.transition_prob)  # (S+1, S+1), dummy col becomes 0
             B_prob = torch.exp(self.emission_prob)    # (S, V)
 
@@ -518,7 +515,7 @@ class HMMClassifier(BaseUnsupervisedClassifier):
                 n = len(obs_list)
                 obs = torch.tensor(obs_list, dtype=torch.long, device=self.device)
 
-                # ===== Forward (log-alpha) =====
+                # forward-backward
                 log_alpha = torch.full((n, S + 1), neg_inf, device=self.device)
                 log_alpha[0, 1:] = log_A[0, 1:] + log_B[:, obs[0]]
 
@@ -526,7 +523,6 @@ class HMMClassifier(BaseUnsupervisedClassifier):
                     scores = log_alpha[t - 1].unsqueeze(1) + log_A  # (S+1, S+1)
                     log_alpha[t, 1:] = torch.logsumexp(scores[:, 1:], dim=0) + log_B[:, obs[t]]
 
-                # ===== Backward (log-beta) =====
                 log_beta = torch.full((n, S + 1), neg_inf, device=self.device)
                 log_beta[n - 1, 1:] = 0.0  # log(1)
 
@@ -537,14 +533,12 @@ class HMMClassifier(BaseUnsupervisedClassifier):
                     scores = log_A_real + log_future.unsqueeze(0)        # (S,S)
                     log_beta[t, 1:] = torch.logsumexp(scores, dim=1)
 
-                # ===== Gamma =====
                 log_gamma_unnorm = log_alpha[:, 1:] + log_beta[:, 1:]    # (n,S)
                 log_gamma = log_gamma_unnorm - torch.logsumexp(
                     log_gamma_unnorm, dim=1, keepdim=True
                 )
                 gamma = torch.exp(log_gamma)  # (n,S)
 
-                # ===== Xi =====
                 log_alpha_real = log_alpha[:, 1:]  # (n,S)
                 log_beta_real = log_beta[:, 1:]    # (n,S)
 
@@ -562,7 +556,6 @@ class HMMClassifier(BaseUnsupervisedClassifier):
                 log_xi = log_xi_unnorm - torch.logsumexp(log_xi_unnorm, dim=(1, 2), keepdim=True)
                 xi = torch.exp(log_xi)  # (n-1,S,S)
 
-                # ===== Expected counts for this sentence =====
                 ex_init = gamma[0]         # (S,)
                 ex_trans = xi.sum(dim=0)   # (S,S)
 
@@ -574,26 +567,25 @@ class HMMClassifier(BaseUnsupervisedClassifier):
                 )
     
 
-                # ===== EMA over counts =====
+                # M-step
                 with torch.no_grad():
                     ema_init = (1.0 - rate) * ema_init + rate * ex_init
                     ema_trans = (1.0 - rate) * ema_trans + rate * ex_trans
                     ema_emit = (1.0 - rate) * ema_emit + rate * ex_emit
 
-                    # Build full transition "count" matrix with dummy column forced to 0
+                    # Build full transition "count" matrix 
                     trans_counts = torch.full((S + 1, S + 1), self.epsilon, device=self.device)
-                    trans_counts[:, 0] = 0.0               # <-- EXACTLY ZERO into dummy
+                    trans_counts[:, 0] = 0.0               
                     trans_counts[0, 1:] += ema_init
                     trans_counts[1:, 1:] += ema_trans
 
                     emis_counts = torch.full_like(self.emission_prob, self.epsilon) 
-                    emis_counts += ema_emit # already positive
+                    emis_counts += ema_emit 
 
                     # Convert counts -> log-probs
                     new_log_A = self._normalize_log(trans_counts)
                     new_log_B = self._normalize_log(emis_counts)
 
-                    # Hard-enforce dummy column is impossible (numerical safety)
                     new_log_A[:, 0] = neg_inf
 
                     self.transition_prob = new_log_A

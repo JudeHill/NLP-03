@@ -100,10 +100,18 @@ To reproduce results, run
 source scripts/results_script.sh
 ~~~
 
-from the parent directory of the project.
+from the root directory of the project.
 
 This will re-run all methods of training for UPOS and XPOS tags, for 50 epochs in each case (apart from the NHMM, which is run for 10 epochs). A python script is then run to produce figures (saved to figures/) which show convergence for each method, and a pandas DF which closely mirrors the results table included in the report (this is printed to the console).
 
 Another python script then uses Pandas to analyse the CSV output from each method, accumulating data about the sentences on which models performed best and worst. Selections of this output which mirrors what was included in the final report is then written to case_studies.txt
 
 __NOTE__: Each run of results is for 50 epochs, so running all consecutively will likely take in the order of days, depending on hardware. A VM is strongly recommended to run this project. 
+
+__NOTE__: Some of the project methods (Kmeans clustering) do matrix assignment in very large batches, for speed. This has a large RAM requirement. **To run this script please ensure you have at least 40GB of RAM. GCP has a range of suitable VMs available on a free trial**
+
+## Other details
+
+The `res/`, `save/` and `figs/` directories are scratch work containing some of the results, saved models and figures from my runs. They are not exhaustive: due to git repositiory size limits I had to delete some results. They can be largely ignored - all relevant results are contained in the report, and the results script creates new, distinct directories to store results in.
+
+`old_requirements`, `baby_results_script`, `baby_results_generator` and `results_generator_old` are also all scratch work and can largely be ignored.

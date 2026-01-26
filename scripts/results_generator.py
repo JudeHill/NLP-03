@@ -118,6 +118,8 @@ plot_all_results(prog_results_xpos, "XPOS", save_path=figures_dir)
 
 sEM_short_results, _ = compute_results([("sEM/alpha_6", "10_1")], stats, method_names, results_dir=root_results_dir, tag="XPOS")
 plot_prog_results(sEM_short_results, ["normalized-VI", "V-score"], method_names["alpha_6"], filename="sEM_short_xpos.png", save_path=figures_dir)
+kmeans_short_results,  _ = compute_results([("kmeans", "10_1")], stats, method_names, results_dir=root_results_dir, tag="UPOS")
+plot_prog_results(kmeans_short_results, ["normalized-VI", "V-score"], method_names["kmeans"], filename="kmeans_short_upos.png", save_path=figures_dir)
 
 
 

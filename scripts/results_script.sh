@@ -30,8 +30,9 @@ python -m main train-test nhmm xpos --max-epochs 10 1  --save-path ./new_saves/X
 # MLE
 python -m main train-test hmm-mle upos --max-epochs 10 5  --save-path ./new_saves/UPOS/MLE/10_5.pt --res-path ./new_results/UPOS/MLE/10_5.csv
 python -m main train-test hmm-mle xpos --max-epochs 10 5  --save-path ./new_saves/XPOS/MLE/10_5.pt --res-path ./new_results/XPOS/MLE/10_5.csv
-# online EM for 10 epochs for convergence analysis
+# online EM / kmeans for 10 epochs for convergence analysis
 python -m main train-test hmm-sEM xpos --max-epochs 10 1  --save-path ./new_saves/XPOS/sEM/alpha_6/10_1.pt --res-path ./new_results/XPOS/sEM/alpha_6/10_1.csv --alpha=0.6
+python -m main train-test kmeans upos --max-epochs 10 1  --save-path ./new_saves/UPOS/kmeans/10_1.pt --res-path ./new_results/UPOS/kmeans/10_1.csv 
 # Generate results and figures
 echo "Computing results and figures"
 python -m scripts.results_generator
